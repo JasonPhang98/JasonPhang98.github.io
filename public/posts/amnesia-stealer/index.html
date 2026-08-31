@@ -15,8 +15,8 @@
 
   
   
-    <title>Hunting MacOS Amnesia Stealer in Elastic &middot; Jason</title>
-    <meta name="title" content="Hunting MacOS Amnesia Stealer in Elastic &middot; Jason">
+    <title>Hunting macOS Amnesia Stealer in Elastic &middot; Jason</title>
+    <meta name="title" content="Hunting macOS Amnesia Stealer in Elastic &middot; Jason">
   
 
   
@@ -59,7 +59,7 @@
   
   <meta property="og:url" content="//localhost:1313/posts/amnesia-stealer/">
 	<meta property="og:site_name" content="Jason">
-	<meta property="og:title" content="Hunting MacOS Amnesia Stealer in Elastic">
+	<meta property="og:title" content="Hunting macOS Amnesia Stealer in Elastic">
 	<meta property="og:description" content="Following Amnesia Stealer through macOS endpoint telemetry in Elastic.">
 	<meta property="og:locale" content="en">
 	<meta property="og:type" content="article">
@@ -73,7 +73,7 @@
 
   
 	<meta name="twitter:card" content="summary">
-	<meta name="twitter:title" content="Hunting MacOS Amnesia Stealer in Elastic">
+	<meta name="twitter:title" content="Hunting macOS Amnesia Stealer in Elastic">
 	<meta name="twitter:description" content="Following Amnesia Stealer through macOS endpoint telemetry in Elastic.">
 
   
@@ -244,8 +244,8 @@
     "@context": "https://schema.org",
     "@type": "Article",
     "articleSection": "Posts",
-    "name": "Hunting MacOS Amnesia Stealer in Elastic",
-    "headline": "Hunting MacOS Amnesia Stealer in Elastic",
+    "name": "Hunting macOS Amnesia Stealer in Elastic",
+    "headline": "Hunting macOS Amnesia Stealer in Elastic",
     "description": "Following Amnesia Stealer through macOS endpoint telemetry in Elastic.",
     "inLanguage": "en",
     "url" : "//localhost:1313/posts/amnesia-stealer/",
@@ -263,7 +263,7 @@
     "keywords": ["macOS","Threat Hunting","Elastic","Infostealer"],
     
     "mainEntityOfPage": "//localhost:1313/posts/amnesia-stealer/",
-    "wordCount":  8021 
+    "wordCount":  8026 
   }]
   </script>
 
@@ -647,7 +647,7 @@
     <header id="single_header" class="mt-5 max-w-prose">
       
       <h1 class="mt-0 text-4xl font-extrabold text-neutral-900 dark:text-neutral">
-        Hunting MacOS Amnesia Stealer in Elastic
+        Hunting macOS Amnesia Stealer in Elastic
       </h1>
       <div class="mt-1 mb-6 text-base text-neutral-500 dark:text-neutral-400 print:hidden">
         
@@ -1430,9 +1430,9 @@
     
 </h3>
 <p>At this point I expected to find <code>osascript</code>.</p>
-<p>Fake password prompts are common enough in macOS malware that looking for AppleScript activity seemed like a reasonable hypothesis. In past AMOS stealer infections, they would have a fake dialog box to prompt the user to enter the credentiaks. I tried hunting with :</p>
+<p>Fake password prompts are common enough in macOS malware that looking for AppleScript activity seemed like a reasonable hypothesis. In past AMOS stealer infections, they would have a fake dialog box to prompt the user to enter the credentials. I tried hunting with :</p>
 <div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">process.command_line : *osascript* and process.command_line : *display*</span></span></code></pre></div></div>
-<p>No resuls seen. That initially looked like another telemetry gap, but Jamf&rsquo;s analysis explained why. Amnesia does not need to spawn <code>osascript</code> for this prompt. Jamf documented a native AppKit <code>NSAlert</code> being used instead.</p>
+<p>No results seen. That initially looked like another telemetry gap, but Jamf&rsquo;s analysis explained why. Amnesia does not need to spawn <code>osascript</code> for this prompt. Jamf documented a native AppKit <code>NSAlert</code> being used instead.</p>
 <p>That means the fake password dialog can be created inside the malware process itself, leaving no separate <code>osascript</code> child process for me to find in Elastic.</p>
 <p>That was one of the more useful negative findings from the hunt:</p>
 <blockquote><p>No <code>osascript</code> process does not mean no deceptive password prompt occurred.</p>
@@ -1446,7 +1446,7 @@
     </span>
     
 </h3>
-<p>If there were dscl and keychain events, there bound to be file events related to the keychaind database too. File telemetry from the same execution chain showed repeated access to:</p>
+<p>If there were dscl and keychain events, there bound to be file events related to the Keychain database too. File telemetry from the same execution chain showed repeated access to:</p>
 <div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">/Users/jason/Library/Keychains/login.keychain-db</span></span></code></pre></div></div>
 <p>A broad file search was enough to surface it:</p>
 <div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">process.parent.pid : 14486 and event.category : &#34;file&#34; and event.type : &#34;access&#34;</span></span></code></pre></div></div>
@@ -1501,7 +1501,7 @@
     </span>
     
 </h3>
-<p>After spending most of the investigation following process relationships, I switched back to file telemetry. With so many command line activities, there ought to be file telemetry too. The same process tree that gave me the bootstrap activity also generated a large number of file events, so I started with the parent PID I had already been following:</p>
+<p>After spending most of the investigation following process relationships, I switched back to file telemetry. With that much process activity, I expected corresponding file telemetry as well. The same process tree that gave me the bootstrap activity also generated a large number of file events, so I started with the parent PID I had already been following:</p>
 <div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">process.parent.pid : 14486 and event.category : &#34;file&#34; and event.type : &#34;change&#34;</span></span></code></pre></div></div>
 <figure><img
     class="my-0 rounded-md"
@@ -2348,7 +2348,7 @@
     </span>
     
 </h3>
-<p>Cleanup was not one single event at the end. As with every other malware, there ought to be cleanup after execution.</p>
+<p>Cleanup was not one single event at the end. Cleanup was not a single event at the end; Amnesia removed artifacts throughout execution.</p>
 <p>I observed:</p>
 <div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-bash" data-lang="bash"><span class="line"><span class="cl">rm -f /tmp/._77002.zip</span></span></code></pre></div></div>
 <p>after extraction.</p>
@@ -2507,7 +2507,7 @@
 </span></span><span class="line"><span class="cl">        ↓
 </span></span><span class="line"><span class="cl">freeipapi.com
 </span></span><span class="line"><span class="cl">free.freeipapi.com</span></span></code></pre></div></div>
-<p>A public IP/geolocation service is not malicious by itself, and legitimate applications may use the same service.The interesting part was an unknown hidden executable under <code>/private/tmp</code> contacting an external IP-information service immediately after performing local host fingerprinting.</p>
+<p>A public IP/geolocation service is not malicious by itself, and legitimate applications may use the same service. The interesting part was an unknown hidden executable under <code>/private/tmp</code> contacting an external IP-information service immediately after performing local host fingerprinting.</p>
 <p>This gave the victim-profiling activity another layer:</p>
 <div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">local username
 </span></span><span class="line"><span class="cl">      ↓
@@ -2616,7 +2616,7 @@
 </span></span><span class="line"><span class="cl">execution</span></span></code></pre></div></div>
 <p><strong>Common false positives</strong></p>
 <p>Developers, package managers, software installers, update frameworks, MDM tooling and administrative scripts can legitimately use <code>curl</code> with <code>/tmp</code>.</p>
-<p>In an enterprise environment I would use this as a hunting query rather than a standalone detection. The downloaded filename, parent process, destination domain and subsequent file activity provide the context needed to separate normal activity from something worth investigating. It would be extremely noisy based from this sole hunting query so be sure to cross check with the domain observed.</p>
+<p>In an enterprise environment I would use this as a hunting query rather than a standalone detection. The downloaded filename, parent process, destination domain and subsequent file activity provide the context needed to separate normal activity from something worth investigating. On its own, this query is likely to be noisy, so I would correlate matches with the destination domain, parent process and follow-on activity.</p>
 
 <h3 class="relative group">Pipe-to-shell execution
     <div id="pipe-to-shell-execution" class="anchor"></div>

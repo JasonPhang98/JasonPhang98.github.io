@@ -1,7 +1,7 @@
 +++
 date = '2026-08-31T12:56:09+08:00'
 draft = false
-title = 'Hunting MacOS Amnesia Stealer in Elastic'
+title = 'Hunting macOS Amnesia Stealer in Elastic'
 description = 'Following Amnesia Stealer through macOS endpoint telemetry in Elastic.'
 tags = [
   'macOS',
@@ -430,13 +430,13 @@ Later artifact analysis confirmed that the entered password was also stored loca
 
 At this point I expected to find `osascript`.
 
-Fake password prompts are common enough in macOS malware that looking for AppleScript activity seemed like a reasonable hypothesis. In past AMOS stealer infections, they would have a fake dialog box to prompt the user to enter the credentiaks. I tried hunting with : 
+Fake password prompts are common enough in macOS malware that looking for AppleScript activity seemed like a reasonable hypothesis. In past AMOS stealer infections, they would have a fake dialog box to prompt the user to enter the credentials. I tried hunting with : 
 
 ```text
 process.command_line : *osascript* and process.command_line : *display*
 ```
 
-No resuls seen. That initially looked like another telemetry gap, but Jamf's analysis explained why. Amnesia does not need to spawn `osascript` for this prompt. Jamf documented a native AppKit `NSAlert` being used instead.
+No results seen. That initially looked like another telemetry gap, but Jamf's analysis explained why. Amnesia does not need to spawn `osascript` for this prompt. Jamf documented a native AppKit `NSAlert` being used instead.
 
 That means the fake password dialog can be created inside the malware process itself, leaving no separate `osascript` child process for me to find in Elastic.
 
@@ -446,7 +446,7 @@ That was one of the more useful negative findings from the hunt:
 
 ### Following the Keychain access
 
-If there were dscl and keychain events, there bound to be file events related to the keychaind database too. File telemetry from the same execution chain showed repeated access to:
+If there were dscl and keychain events, there bound to be file events related to the Keychain database too. File telemetry from the same execution chain showed repeated access to:
 
 ```text
 /Users/jason/Library/Keychains/login.keychain-db
@@ -496,7 +496,7 @@ Keychain collection
 
 ### Pivoting from the process tree into file activity
 
-After spending most of the investigation following process relationships, I switched back to file telemetry. With so many command line activities, there ought to be file telemetry too. The same process tree that gave me the bootstrap activity also generated a large number of file events, so I started with the parent PID I had already been following:
+After spending most of the investigation following process relationships, I switched back to file telemetry. With that much process activity, I expected corresponding file telemetry as well. The same process tree that gave me the bootstrap activity also generated a large number of file events, so I started with the parent PID I had already been following:
 
 ```text
 process.parent.pid : 14486 and event.category : "file" and event.type : "change"
@@ -1353,7 +1353,7 @@ I did not rely on the existence of the plist alone; the process telemetry showed
 
 ### Cleanup was happening all the way through
 
-Cleanup was not one single event at the end. As with every other malware, there ought to be cleanup after execution. 
+Cleanup was not one single event at the end. Cleanup was not a single event at the end; Amnesia removed artifacts throughout execution.
 
 I observed:
 
@@ -1510,7 +1510,7 @@ freeipapi.com
 free.freeipapi.com
 ```
 
-A public IP/geolocation service is not malicious by itself, and legitimate applications may use the same service.The interesting part was an unknown hidden executable under `/private/tmp` contacting an external IP-information service immediately after performing local host fingerprinting.
+A public IP/geolocation service is not malicious by itself, and legitimate applications may use the same service. The interesting part was an unknown hidden executable under `/private/tmp` contacting an external IP-information service immediately after performing local host fingerprinting.
 
 This gave the victim-profiling activity another layer:
 
@@ -1636,7 +1636,7 @@ execution
 
 Developers, package managers, software installers, update frameworks, MDM tooling and administrative scripts can legitimately use `curl` with `/tmp`.
 
-In an enterprise environment I would use this as a hunting query rather than a standalone detection. The downloaded filename, parent process, destination domain and subsequent file activity provide the context needed to separate normal activity from something worth investigating. It would be extremely noisy based from this sole hunting query so be sure to cross check with the domain observed. 
+In an enterprise environment I would use this as a hunting query rather than a standalone detection. The downloaded filename, parent process, destination domain and subsequent file activity provide the context needed to separate normal activity from something worth investigating. On its own, this query is likely to be noisy, so I would correlate matches with the destination domain, parent process and follow-on activity.
 
 ### Pipe-to-shell execution
 
