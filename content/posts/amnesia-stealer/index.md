@@ -1,7 +1,7 @@
 +++
 date = '2026-08-31T12:56:09+08:00'
-draft = true
-title = 'Hunting Amnesia Stealer in Elastic'
+draft = false
+title = 'Hunting MacOS Amnesia Stealer in Elastic'
 description = 'Following Amnesia Stealer through macOS endpoint telemetry in Elastic.'
 tags = [
   'macOS',
