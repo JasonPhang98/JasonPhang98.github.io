@@ -15,3 +15,6 @@ title = "Jason"
   name = "Jason"
   headline = "macOS Threat Hunting · TTPs · Telemetry"
   bio = "Documenting macOS threat activity, hunting ideas and detection opportunities."
+  links = [
+    { linkedin = "https://www.linkedin.com/in/jason-phang-vern-onn/" },
+  ]

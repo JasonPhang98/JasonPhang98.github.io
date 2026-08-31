@@ -12,3 +12,8 @@
   name = "About"
   pageRef = "about"
   weight = 30
+
+[[main]]
+  name = "LinkedIn"
+  url = "https://www.linkedin.com/in/jason-phang-vern-onn/"
+  weight = 40
