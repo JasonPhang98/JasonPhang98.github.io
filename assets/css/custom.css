@@ -1,0 +1,4 @@
+/* Give technical articles more horizontal space */
+.max-w-prose {
+    max-width: 1150px !important;
+}

@@ -1,0 +1,17 @@
+disabled = false
+locale = "en"
+label = "English"
+weight = 1
+title = "Jason"
+
+[params]
+  displayName = "EN"
+  isoCode = "en"
+  rtl = false
+  dateFormat = "2 January 2006"
+  description = "macOS security research, malware analysis and threat hunting"
+
+[params.author]
+  name = "Jason"
+  headline = "macOS Threat Hunting · TTPs · Telemetry"
+  bio = "Documenting macOS threat activity, hunting ideas and detection opportunities."
