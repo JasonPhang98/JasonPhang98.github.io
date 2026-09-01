@@ -2077,46 +2077,6 @@ A stronger hit would include additional context such as a custom `--user-data-di
 
 ### Takeaway
 
-The first half of the investigation asked:
-
-> **I found something suspicious. What did this process do?**
-
-PID and PPID pivots were extremely effective for answering that question.
-
-These hunts start from the opposite direction:
-
-> **I do not know which process is malicious yet. Which behaviors are worth investigating?**
-
-Several of the queries independently rediscovered the same Amnesia activity:
-
-- hidden payload staging under `/tmp`
-- quarantine manipulation
-- ad-hoc code signing
-- host discovery
-- Apple Notes collection
-- password validation
-- Keychain unlocking and direct access
-- archive creation
-- cleanup
-- APFS snapshot mounting
-
-Other hunts returned legitimate noise or no results at all.
-
-That is expected.
-
-Utilities such as `curl`, `xattr`, `codesign`, `dscl`, `security`, `ditto`, `system_profiler` and `mount_apfs` are not malicious by themselves.
-
-The useful signal comes from the combination of **who executed the command, where the parent process came from, what files were targeted, how quickly the events occurred and what happened immediately before and after**.
-
-| Approach | Best Used For |
-|---|---|
-| PID / PPID investigation | Reconstructing activity once something suspicious has already been identified |
-| Behavioral hunting | Finding suspicious activity without already knowing which process is malicious |
-
-Using both approaches against the same telemetry allowed the infection to be reconstructed while also producing hunting ideas that can be reused against other macOS stealers.
-
-### Takeaway
-
 The initial investigation asked:
 
 > **I found something suspicious. What did this process do?**
