@@ -13,7 +13,7 @@ tags = [
 
 I came across Amnesia Stealer while looking for a macOS infostealer that I could investigate from a threat hunting perspective.
 
-The activity was originally documented by [Jamf Threat Labs](https://www.jamf.com/blog/amnesia-stealer-macos-infostealer-clickfix/). Their research covers the malware and campaign in much greater depth. I was interested in a slightly different question:
+The activity was originally documented by [Jamf Threat Labs](https://www.jamf.com/blog/amnesia-stealer-macos-infostealer-clickfix/). Their research covers the malware and campaign in much greater depth. I was interested in a slightly different question: 
 
 > What does this activity actually look like when I am sitting in Elastic and following macOS endpoint telemetry?
 
@@ -21,7 +21,7 @@ I also wanted to look at something other than Atomic Stealer/AMOS, which already
 
 This was not a reverse-engineering exercise. I ran the activity in a macOS lab and worked primarily from process, file and network telemetry. Most of the investigation came down to following `process.pid`, `process.parent.pid`, process ancestry, command lines and whatever artifact gave me the next useful pivot.
 
-That also means this post is not organized into perfectly separated malware lifecycle or ATT&CK phases. That is not how I investigated it. Some pivots worked, some returned nothing, and a few only made sense after I found additional artifacts later.
+That also means this post is not organized into perfectly separated malware lifecycle or ATT&CK phases. That is not how I investigated it. Some pivots worked, some returned nothing, and a few only made sense after I found additional artifacts later. This is going to be a really lengthy blog but I hope it would be informative for anyone who is interested in macOS threat hunting or Mac malware. 
 
 
 ## What caught my attention
@@ -1584,8 +1584,6 @@ I also found no `osascript` process even though a fake password prompt clearly a
 
 That is fairly normal in threat hunting. The process tree will not always look exactly how you expect, and the telemetry will not always contain the field or event needed to prove every step of the chain.
 
-## Hunting and detection ideas
-
 ## Behavior Hunting: Rediscovering Amnesia Without the PID
 
 The investigation above relied heavily on PID and PPID relationships to reconstruct Amnesia's activity. That works well once a suspicious process has been identified, but I also wanted to see how much of the same activity could be found without knowing the malware PID beforehand.
@@ -1648,23 +1646,7 @@ event.category : "file" and file.path : */tmp/.*
 | Aug 17, 2026 @ 06:49:45.838 | `/usr/bin/codesign` | `/private/tmp/.com.apple.dt.77002` | `rename` | `change` |
 | Aug 17, 2026 @ 06:49:47.885 | `/bin/rm` | `/private/tmp/.com.apple.dt.77002` | `deletion` | `deletion` |
 
-This hunt also returned legitimate Spotlight/Biome activity, which is useful when considering how the query would need to be baselined in a production environment.
-
-The Amnesia events form a much more interesting lifecycle:
-
-```text
-download
-    ↓
-hidden temporary file
-    ↓
-rename
-    ↓
-code-signing activity
-    ↓
-deletion
-```
-
-A hidden file alone is weak evidence. Multiple related operations against the same object within seconds are much more useful.
+This hunt also returned legitimate Spotlight/Biome activity, which is useful when considering how the query would need to be baselined in a production environment. A hidden file alone is weak evidence. Multiple related operations against the same object within seconds are much more useful.
 
 ---
 
@@ -1765,10 +1747,6 @@ event.category : "process" and (process.executable : "/bin/cp" or process.execut
 |---|---|---|---|---|
 | Aug 17, 2026 @ 06:50:31.652 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite` | `sh -c cat '/Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite' 2>/dev/null` |
 | Aug 17, 2026 @ 06:50:31.921 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite` | `sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite` |
-| Aug 17, 2026 @ 06:50:31.962 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm` | `sh -c cat '/Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm' 2>/dev/null` |
-| Aug 17, 2026 @ 06:50:32.019 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm` | `sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm` |
-| Aug 17, 2026 @ 06:50:32.084 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal` | `sh -c cat '/Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal' 2>/dev/null` |
-| Aug 17, 2026 @ 06:50:32.116 | `/bin/cat` | `[fork, exec, end]` | `cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal` | `sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal` |
 
 The hunt shows all three SQLite components being read. The WAL file is particularly relevant because recent database changes may not yet exist only in the primary SQLite database.
 
@@ -1788,18 +1766,6 @@ event.category : "file" and file.path : *NoteStore*
 
 The file telemetry did not provide the original read/open event against the Notes database, but it independently exposed temporary staged copies being deleted.
 
-Together, the two telemetry sources give us:
-
-```text
-Notes database read
-    ↓
-SQLite + WAL + SHM collection
-    ↓
-temporary staging
-    ↓
-cleanup
-```
-
 ---
 
 ### Host and System Discovery
@@ -1814,13 +1780,13 @@ event.category : "process" and (process.executable : "/usr/sbin/ioreg" or proces
 
 #### Result
 
-The hunt returned activity for `ioreg`, `sw_vers` and `system_profiler` within the same discovery window.
-
-One of the visible `system_profiler` events was:
+The hunt returned activity for `ioreg`, `sw_vers` and `system_profiler` within the same discovery window. Some excerpt of the results
 
 | @timestamp | process.executable | event.action | process.command_line | process.parent.command_line |
 |---|---|---|---|---|
 | Aug 17, 2026 @ 06:49:58.631 | `/usr/sbin/system_profiler` | `[fork, exec, end]` | `/usr/sbin/system_profiler -nospawn -xml SPSoftwareDataType -detailLevel full` | `system_profiler SPSoftwareDataType SPHardwareDataType SPDisplaysDataType` |
+| Aug 17, 2026 @ 06:51:17.853 | `/usr/bin/sw_vers` | `[exec, end]` | `sw_vers -productVersion` | `/tmp/.com.apple.dt.77002` |
+| Aug 17, 2026 @ 06:51:22.234 | `/bin/bash` | `[exec, end]` | `sh -c ioreg -rd1 -c IOPlatformExpertDevice 2>/dev/null \| awk ...` | `/tmp/.com.apple.dt.77002` |
 
 These utilities are normal on macOS. The more useful signal is several discovery commands appearing within seconds under the same unexpected execution chain.
 
@@ -1894,22 +1860,6 @@ The hunt returned 25 access events. The first visible events were:
 |---|---|---|---:|---:|---|
 | Aug 17, 2026 @ 06:49:53.122 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
 | Aug 17, 2026 @ 06:49:53.427 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
-| Aug 17, 2026 @ 06:49:53.728 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
-| Aug 17, 2026 @ 06:49:54.035 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
-| Aug 17, 2026 @ 06:49:54.336 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
-| Aug 17, 2026 @ 06:49:54.642 | `access` | `/private/tmp/.com.apple.dt.77002` | `14486` | `14499` | `/Users/jason/Library/Keychains/login.keychain-db` |
-
-This gives us a useful behavioral chain:
-
-```text
-password captured
-    ↓
-dscl -authonly
-    ↓
-security unlock-keychain
-    ↓
-direct login.keychain-db access
-```
 
 Direct Keychain access can occur legitimately through password managers, migration tools and forensic software. The unusual temporary executable and surrounding credential activity make this sequence more significant.
 
@@ -1933,9 +1883,7 @@ Local State
 event.category : "file" and event.type : "access" and (file.path : *Login\ Data* or file.path : *Cookies* or file.path : *History* or file.path : *Web\ Data* or file.path : *Local\ State*) and not process.executable : "/System/Volumes/Preboot/Cryptexes/Incoming/OS/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking"
 ```
 
-The WebKit Networking process above generated legitimate access noise during testing and was excluded.
-
-In a real environment, additional baselining would likely be needed for legitimate browsers, browser helpers, backup products and security tooling.
+The WebKit Networking process above generated legitimate access noise during testing and was excluded. No results were seen from the hunt for the stage 2 activity. In a real environment, additional baselining would likely be needed for legitimate browsers, browser helpers, backup products and security tooling.
 
 One access to `History` or `Cookies` is not necessarily meaningful. Multiple browser databases accessed rapidly by the same unusual process are much more interesting, particularly when followed by staging or archive creation.
 
@@ -1972,10 +1920,16 @@ Amnesia also attempted persistence using a LaunchDaemon.
 ```kql
 event.category : "file" and file.path : /Library/LaunchDaemons/*.plist
 ```
+#### Result
 
-LaunchDaemons are widely used by legitimate software, security products and MDM tooling.
+| process.executable | event.action | process.command_line | process.parent.command_line | process.pid |
+|---|---|---|---|---|
+| `/bin/cp` | `launch_daemon` | `cp /tmp/starter /Library/LaunchDaemons/com.apple.ReportCrash.agent_68910896.plist` | `sudo -S cp /tmp/starter /Library/LaunchDaemons/com.apple.ReportCrash.agent_68910896.plist` | `14745` |
+| `/bin/launchctl` | `[fork, exec, end]` | `launchctl bootstrap system /Library/LaunchDaemons/com.apple.ReportCrash.agent_68910896.plist` | `sudo -S launchctl bootstrap system /Library/LaunchDaemons/com.apple.ReportCrash.agent_68910896.plist` | — |
 
-For any result, the important pivots are:
+The first event is particularly useful because Elastic classified the `/bin/cp` activity as `event.action: launch_daemon`. The plist itself referenced the hidden `/tmp/.com.apple.dt.77002` payload and enabled both `RunAtLoad` and `KeepAlive`. The malware then immediately loaded the persistence entry using `launchctl bootstrap system`, rather than waiting for the next reboot.
+
+LaunchDaemons are widely used by legitimate software, security products and MDM tooling. For any result, the important pivots are:
 
 - process responsible for creating the plist
 - `Program` or `ProgramArguments`
@@ -1983,8 +1937,6 @@ For any result, the important pivots are:
 - ownership and permissions
 - related `launchctl` activity
 - whether the referenced executable resides in a temporary or user-writable location
-
-The earlier investigation established the Amnesia-related LaunchDaemon activity, but no separate result table was captured during this behavioral-hunting pass.
 
 ---
 
@@ -2005,19 +1957,14 @@ event.category : "process" and process.executable : "/System/Library/Filesystems
 | Aug 17, 2026 @ 06:50:38.837 | `/System/Library/Filesystems/apfs.fs/Contents/Resources/mount_apfs` | `[fork, exec, end]` | `mount_apfs -o nobrowse -s com.apple.TimeMachine.2026-08-17-065038.local ...` | `sudo -S mount_apfs -o nobrowse -s com.apple.TimeMachine.2026...` | `14622` | `14621` |
 | Aug 17, 2026 @ 06:51:14.227 | `/System/Library/Filesystems/apfs.fs/Contents/Resources/mount_apfs` | `[fork, exec, end]` | `mount_apfs -o nobrowse -s com.apple.TimeMachine.2026-08-17-065112.local ...` | `sudo -S mount_apfs -o nobrowse -s com.apple.TimeMachine.2026...` | `14682` | `14681` |
 
-The `...` values above reflect where the Kibana view itself truncated the command line.
 
-Snapshot mounting is not malicious by itself. The suspicious context would be an unexpected process creating or mounting snapshots and subsequently accessing protected browser or user data.
-
-In this execution, the attempted technique did not establish a successful TCC bypass on macOS 26.
+Snapshot mounting is not malicious by itself. The suspicious context would be an unexpected process creating or mounting snapshots and subsequently accessing protected browser or user data. In this execution, the attempted technique did not establish a successful TCC bypass on macOS 26.
 
 ---
 
 ### Hunts That Returned No Results
 
-Not every useful hunting hypothesis should return a malicious event.
-
-Several additional behaviors were tested against the dataset.
+Not every useful hunting hypothesis should return a malicious event. Several additional behaviors were tested in my lab.
 
 #### System Audio Muting
 

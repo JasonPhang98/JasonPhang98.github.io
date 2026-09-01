@@ -263,7 +263,7 @@
     "keywords": ["macOS","Threat Hunting","Elastic","Infostealer"],
     
     "mainEntityOfPage": "//localhost:1313/posts/amnesia-stealer/",
-    "wordCount":  8966 
+    "wordCount":  8905 
   }]
   </script>
 
@@ -697,7 +697,7 @@
   <div class="flex flex-row flex-wrap items-center">
     
     
-      <time datetime="2026-08-31T12:56:09&#43;08:00">31 August 2026</time><span class="px-2 text-primary-500">&middot;</span><span title="Reading time">43 mins</span>
+      <time datetime="2026-08-31T12:56:09&#43;08:00">31 August 2026</time><span class="px-2 text-primary-500">&middot;</span><span title="Reading time">42 mins</span>
     
 
     
@@ -797,7 +797,6 @@
       </ul>
     </li>
     <li><a href="#lessons-learnt">Lessons Learnt</a></li>
-    <li><a href="#hunting-and-detection-ideas">Hunting and detection ideas</a></li>
     <li><a href="#behavior-hunting-rediscovering-amnesia-without-the-pid">Behavior Hunting: Rediscovering Amnesia Without the PID</a>
       <ul>
         <li><a href="#downloading-archives-into-tmp">Downloading Archives Into <code>/tmp</code></a>
@@ -853,10 +852,14 @@
             <li><a href="#result-8">Result</a></li>
           </ul>
         </li>
-        <li><a href="#launchdaemon-persistence">LaunchDaemon Persistence</a></li>
-        <li><a href="#apfs-snapshot-mounting">APFS Snapshot Mounting</a>
+        <li><a href="#launchdaemon-persistence">LaunchDaemon Persistence</a>
           <ul>
             <li><a href="#result-9">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#apfs-snapshot-mounting">APFS Snapshot Mounting</a>
+          <ul>
+            <li><a href="#result-10">Result</a></li>
           </ul>
         </li>
         <li><a href="#hunts-that-returned-no-results">Hunts That Returned No Results</a>
@@ -929,7 +932,6 @@
       </ul>
     </li>
     <li><a href="#lessons-learnt">Lessons Learnt</a></li>
-    <li><a href="#hunting-and-detection-ideas">Hunting and detection ideas</a></li>
     <li><a href="#behavior-hunting-rediscovering-amnesia-without-the-pid">Behavior Hunting: Rediscovering Amnesia Without the PID</a>
       <ul>
         <li><a href="#downloading-archives-into-tmp">Downloading Archives Into <code>/tmp</code></a>
@@ -985,10 +987,14 @@
             <li><a href="#result-8">Result</a></li>
           </ul>
         </li>
-        <li><a href="#launchdaemon-persistence">LaunchDaemon Persistence</a></li>
-        <li><a href="#apfs-snapshot-mounting">APFS Snapshot Mounting</a>
+        <li><a href="#launchdaemon-persistence">LaunchDaemon Persistence</a>
           <ul>
             <li><a href="#result-9">Result</a></li>
+          </ul>
+        </li>
+        <li><a href="#apfs-snapshot-mounting">APFS Snapshot Mounting</a>
+          <ul>
+            <li><a href="#result-10">Result</a></li>
           </ul>
         </li>
         <li><a href="#hunts-that-returned-no-results">Hunts That Returned No Results</a>
@@ -1124,7 +1130,7 @@
 <blockquote><p>What does this activity actually look like when I am sitting in Elastic and following macOS endpoint telemetry?</p>
 </blockquote><p>I also wanted to look at something other than Atomic Stealer/AMOS, which already has a large number of write-ups around it.</p>
 <p>This was not a reverse-engineering exercise. I ran the activity in a macOS lab and worked primarily from process, file and network telemetry. Most of the investigation came down to following <code>process.pid</code>, <code>process.parent.pid</code>, process ancestry, command lines and whatever artifact gave me the next useful pivot.</p>
-<p>That also means this post is not organized into perfectly separated malware lifecycle or ATT&amp;CK phases. That is not how I investigated it. Some pivots worked, some returned nothing, and a few only made sense after I found additional artifacts later.</p>
+<p>That also means this post is not organized into perfectly separated malware lifecycle or ATT&amp;CK phases. That is not how I investigated it. Some pivots worked, some returned nothing, and a few only made sense after I found additional artifacts later. This is going to be a really lengthy blog but I hope it would be informative for anyone who is interested in macOS threat hunting or Mac malware.</p>
 
 <h2 class="relative group">What caught my attention
     <div id="what-caught-my-attention" class="anchor"></div>
@@ -2777,16 +2783,6 @@
 <p>I also found no <code>osascript</code> process even though a fake password prompt clearly appeared. Jamf&rsquo;s analysis later explained why: the prompt was created using a native AppKit <code>NSAlert</code>, so there was no separate AppleScript process for Elastic to capture. The same limitation appeared during exfiltration. I could see the collection directory being archived, but I could not independently confirm the final <code>/send/</code> upload because the available endpoint telemetry did not expose the HTTP request path.</p>
 <p>That is fairly normal in threat hunting. The process tree will not always look exactly how you expect, and the telemetry will not always contain the field or event needed to prove every step of the chain.</p>
 
-<h2 class="relative group">Hunting and detection ideas
-    <div id="hunting-and-detection-ideas" class="anchor"></div>
-    
-    <span
-        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#hunting-and-detection-ideas" aria-label="Anchor">#</a>
-    </span>
-    
-</h2>
-
 <h2 class="relative group">Behavior Hunting: Rediscovering Amnesia Without the PID
     <div id="behavior-hunting-rediscovering-amnesia-without-the-pid" class="anchor"></div>
     
@@ -2938,18 +2934,7 @@
 			</tr>
 	</tbody>
 </table>
-<p>This hunt also returned legitimate Spotlight/Biome activity, which is useful when considering how the query would need to be baselined in a production environment.</p>
-<p>The Amnesia events form a much more interesting lifecycle:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">download
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">hidden temporary file
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">rename
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">code-signing activity
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">deletion</span></span></code></pre></div></div>
-<p>A hidden file alone is weak evidence. Multiple related operations against the same object within seconds are much more useful.</p>
+<p>This hunt also returned legitimate Spotlight/Biome activity, which is useful when considering how the query would need to be baselined in a production environment. A hidden file alone is weak evidence. Multiple related operations against the same object within seconds are much more useful.</p>
 <hr>
 
 <h3 class="relative group">Quarantine and Extended Attribute Manipulation
@@ -3169,34 +3154,6 @@
 					<td><code>cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite</code></td>
 					<td><code>sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite</code></td>
 			</tr>
-			<tr>
-					<td>Aug 17, 2026 @ 06:50:31.962</td>
-					<td><code>/bin/cat</code></td>
-					<td><code>[fork, exec, end]</code></td>
-					<td><code>cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm</code></td>
-					<td><code>sh -c cat '/Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm' 2&gt;/dev/null</code></td>
-			</tr>
-			<tr>
-					<td>Aug 17, 2026 @ 06:50:32.019</td>
-					<td><code>/bin/cat</code></td>
-					<td><code>[fork, exec, end]</code></td>
-					<td><code>cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm</code></td>
-					<td><code>sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-shm</code></td>
-			</tr>
-			<tr>
-					<td>Aug 17, 2026 @ 06:50:32.084</td>
-					<td><code>/bin/cat</code></td>
-					<td><code>[fork, exec, end]</code></td>
-					<td><code>cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal</code></td>
-					<td><code>sh -c cat '/Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal' 2&gt;/dev/null</code></td>
-			</tr>
-			<tr>
-					<td>Aug 17, 2026 @ 06:50:32.116</td>
-					<td><code>/bin/cat</code></td>
-					<td><code>[fork, exec, end]</code></td>
-					<td><code>cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal</code></td>
-					<td><code>sudo -S cat /Users/jason/Library/Group Containers/group.com.apple.notes/NoteStore.sqlite-wal</code></td>
-			</tr>
 	</tbody>
 </table>
 <p>The hunt shows all three SQLite components being read. The WAL file is particularly relevant because recent database changes may not yet exist only in the primary SQLite database.</p>
@@ -3251,14 +3208,6 @@
 	</tbody>
 </table>
 <p>The file telemetry did not provide the original read/open event against the Notes database, but it independently exposed temporary staged copies being deleted.</p>
-<p>Together, the two telemetry sources give us:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">Notes database read
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">SQLite + WAL + SHM collection
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">temporary staging
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">cleanup</span></span></code></pre></div></div>
 <hr>
 
 <h3 class="relative group">Host and System Discovery
@@ -3283,8 +3232,7 @@
     </span>
     
 </h4>
-<p>The hunt returned activity for <code>ioreg</code>, <code>sw_vers</code> and <code>system_profiler</code> within the same discovery window.</p>
-<p>One of the visible <code>system_profiler</code> events was:</p>
+<p>The hunt returned activity for <code>ioreg</code>, <code>sw_vers</code> and <code>system_profiler</code> within the same discovery window. Some excerpt of the results</p>
 <table>
 	<thead>
 			<tr>
@@ -3302,6 +3250,20 @@
 					<td><code>[fork, exec, end]</code></td>
 					<td><code>/usr/sbin/system_profiler -nospawn -xml SPSoftwareDataType -detailLevel full</code></td>
 					<td><code>system_profiler SPSoftwareDataType SPHardwareDataType SPDisplaysDataType</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:51:17.853</td>
+					<td><code>/usr/bin/sw_vers</code></td>
+					<td><code>[exec, end]</code></td>
+					<td><code>sw_vers -productVersion</code></td>
+					<td><code>/tmp/.com.apple.dt.77002</code></td>
+			</tr>
+			<tr>
+					<td>Aug 17, 2026 @ 06:51:22.234</td>
+					<td><code>/bin/bash</code></td>
+					<td><code>[exec, end]</code></td>
+					<td><code>sh -c ioreg -rd1 -c IOPlatformExpertDevice 2&gt;/dev/null | awk ...</code></td>
+					<td><code>/tmp/.com.apple.dt.77002</code></td>
 			</tr>
 	</tbody>
 </table>
@@ -3444,48 +3406,8 @@
 					<td style="text-align: right"><code>14499</code></td>
 					<td><code>/Users/jason/Library/Keychains/login.keychain-db</code></td>
 			</tr>
-			<tr>
-					<td>Aug 17, 2026 @ 06:49:53.728</td>
-					<td><code>access</code></td>
-					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
-					<td style="text-align: right"><code>14486</code></td>
-					<td style="text-align: right"><code>14499</code></td>
-					<td><code>/Users/jason/Library/Keychains/login.keychain-db</code></td>
-			</tr>
-			<tr>
-					<td>Aug 17, 2026 @ 06:49:54.035</td>
-					<td><code>access</code></td>
-					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
-					<td style="text-align: right"><code>14486</code></td>
-					<td style="text-align: right"><code>14499</code></td>
-					<td><code>/Users/jason/Library/Keychains/login.keychain-db</code></td>
-			</tr>
-			<tr>
-					<td>Aug 17, 2026 @ 06:49:54.336</td>
-					<td><code>access</code></td>
-					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
-					<td style="text-align: right"><code>14486</code></td>
-					<td style="text-align: right"><code>14499</code></td>
-					<td><code>/Users/jason/Library/Keychains/login.keychain-db</code></td>
-			</tr>
-			<tr>
-					<td>Aug 17, 2026 @ 06:49:54.642</td>
-					<td><code>access</code></td>
-					<td><code>/private/tmp/.com.apple.dt.77002</code></td>
-					<td style="text-align: right"><code>14486</code></td>
-					<td style="text-align: right"><code>14499</code></td>
-					<td><code>/Users/jason/Library/Keychains/login.keychain-db</code></td>
-			</tr>
 	</tbody>
 </table>
-<p>This gives us a useful behavioral chain:</p>
-<div class="highlight-wrapper"><div class="highlight"><pre tabindex="0" class="chroma"><code class="language-text" data-lang="text"><span class="line"><span class="cl">password captured
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">dscl -authonly
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">security unlock-keychain
-</span></span><span class="line"><span class="cl">    ↓
-</span></span><span class="line"><span class="cl">direct login.keychain-db access</span></span></code></pre></div></div>
 <p>Direct Keychain access can occur legitimately through password managers, migration tools and forensic software. The unusual temporary executable and surrounding credential activity make this sequence more significant.</p>
 <hr>
 
@@ -3506,8 +3428,7 @@
 </span></span><span class="line"><span class="cl">Local State</span></span></code></pre></div></div>
 <p><strong>Hunting hypothesis:</strong> Unexpected processes accessing multiple Chromium profile databases may indicate credential, cookie or browser-session collection.</p>
 <div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;file&#34; and event.type : &#34;access&#34; and (file.path : *Login\ Data* or file.path : *Cookies* or file.path : *History* or file.path : *Web\ Data* or file.path : *Local\ State*) and not process.executable : &#34;/System/Volumes/Preboot/Cryptexes/Incoming/OS/System/Library/Frameworks/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.Networking.xpc/Contents/MacOS/com.apple.WebKit.Networking&#34;</code></pre></div>
-<p>The WebKit Networking process above generated legitimate access noise during testing and was excluded.</p>
-<p>In a real environment, additional baselining would likely be needed for legitimate browsers, browser helpers, backup products and security tooling.</p>
+<p>The WebKit Networking process above generated legitimate access noise during testing and was excluded. No results were seen from the hunt for the stage 2 activity. In a real environment, additional baselining would likely be needed for legitimate browsers, browser helpers, backup products and security tooling.</p>
 <p>One access to <code>History</code> or <code>Cookies</code> is not necessarily meaningful. Multiple browser databases accessed rapidly by the same unusual process are much more interesting, particularly when followed by staging or archive creation.</p>
 <hr>
 
@@ -3573,8 +3494,45 @@
 <p>Amnesia also attempted persistence using a LaunchDaemon.</p>
 <p><strong>Hunting hypothesis:</strong> Unexpected creation of property lists under <code>/Library/LaunchDaemons</code> may indicate persistence, particularly when written by processes outside normal installers or management tooling.</p>
 <div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;file&#34; and file.path : /Library/LaunchDaemons/*.plist</code></pre></div>
-<p>LaunchDaemons are widely used by legitimate software, security products and MDM tooling.</p>
-<p>For any result, the important pivots are:</p>
+
+<h4 class="relative group">Result
+    <div id="result-9" class="anchor"></div>
+    
+    <span
+        class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-9" aria-label="Anchor">#</a>
+    </span>
+    
+</h4>
+<table>
+	<thead>
+			<tr>
+					<th>process.executable</th>
+					<th>event.action</th>
+					<th>process.command_line</th>
+					<th>process.parent.command_line</th>
+					<th>process.pid</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>/bin/cp</code></td>
+					<td><code>launch_daemon</code></td>
+					<td><code>cp /tmp/starter /Library/LaunchDaemons/com.apple.ReportCrash.agent_68910896.plist</code></td>
+					<td><code>sudo -S cp /tmp/starter /Library/LaunchDaemons/com.apple.ReportCrash.agent_68910896.plist</code></td>
+					<td><code>14745</code></td>
+			</tr>
+			<tr>
+					<td><code>/bin/launchctl</code></td>
+					<td><code>[fork, exec, end]</code></td>
+					<td><code>launchctl bootstrap system /Library/LaunchDaemons/com.apple.ReportCrash.agent_68910896.plist</code></td>
+					<td><code>sudo -S launchctl bootstrap system /Library/LaunchDaemons/com.apple.ReportCrash.agent_68910896.plist</code></td>
+					<td>—</td>
+			</tr>
+	</tbody>
+</table>
+<p>The first event is particularly useful because Elastic classified the <code>/bin/cp</code> activity as <code>event.action: launch_daemon</code>. The plist itself referenced the hidden <code>/tmp/.com.apple.dt.77002</code> payload and enabled both <code>RunAtLoad</code> and <code>KeepAlive</code>. The malware then immediately loaded the persistence entry using <code>launchctl bootstrap system</code>, rather than waiting for the next reboot.</p>
+<p>LaunchDaemons are widely used by legitimate software, security products and MDM tooling. For any result, the important pivots are:</p>
 <ul>
 <li>process responsible for creating the plist</li>
 <li><code>Program</code> or <code>ProgramArguments</code></li>
@@ -3583,7 +3541,6 @@
 <li>related <code>launchctl</code> activity</li>
 <li>whether the referenced executable resides in a temporary or user-writable location</li>
 </ul>
-<p>The earlier investigation established the Amnesia-related LaunchDaemon activity, but no separate result table was captured during this behavioral-hunting pass.</p>
 <hr>
 
 <h3 class="relative group">APFS Snapshot Mounting
@@ -3600,11 +3557,11 @@
 <div class="highlight-wrapper"><pre tabindex="0"><code class="language-kql" data-lang="kql">event.category : &#34;process&#34; and process.executable : &#34;/System/Library/Filesystems/apfs.fs/Contents/Resources/mount_apfs&#34; and process.command_line : *-s*</code></pre></div>
 
 <h4 class="relative group">Result
-    <div id="result-9" class="anchor"></div>
+    <div id="result-10" class="anchor"></div>
     
     <span
         class="absolute top-0 w-6 transition-opacity opacity-0 -start-6 not-prose group-hover:opacity-100 select-none">
-        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-9" aria-label="Anchor">#</a>
+        <a class="text-primary-300 dark:text-neutral-700 !no-underline" href="#result-10" aria-label="Anchor">#</a>
     </span>
     
 </h4>
@@ -3641,9 +3598,7 @@
 			</tr>
 	</tbody>
 </table>
-<p>The <code>...</code> values above reflect where the Kibana view itself truncated the command line.</p>
-<p>Snapshot mounting is not malicious by itself. The suspicious context would be an unexpected process creating or mounting snapshots and subsequently accessing protected browser or user data.</p>
-<p>In this execution, the attempted technique did not establish a successful TCC bypass on macOS 26.</p>
+<p>Snapshot mounting is not malicious by itself. The suspicious context would be an unexpected process creating or mounting snapshots and subsequently accessing protected browser or user data. In this execution, the attempted technique did not establish a successful TCC bypass on macOS 26.</p>
 <hr>
 
 <h3 class="relative group">Hunts That Returned No Results
@@ -3655,8 +3610,7 @@
     </span>
     
 </h3>
-<p>Not every useful hunting hypothesis should return a malicious event.</p>
-<p>Several additional behaviors were tested against the dataset.</p>
+<p>Not every useful hunting hypothesis should return a malicious event. Several additional behaviors were tested in my lab.</p>
 
 <h4 class="relative group">System Audio Muting
     <div id="system-audio-muting" class="anchor"></div>
