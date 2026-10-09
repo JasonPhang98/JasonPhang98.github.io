@@ -1,6 +1,6 @@
 ---
 title: "Revisiting Essential Stealer: What the Endpoint Logs Revealed"
-date: 2026-10-10
+date: 2026-10-08
 draft: false
 description: "Revisiting an Essential Stealer infection through Elastic telemetry, from blockchain-based C2 rotation to Apple Notes processing, Keychain extraction, XMRig deployment, and a short look at Apple Unified Logs."
 tags:
